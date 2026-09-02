@@ -1,10 +1,15 @@
+/* =========================
+   全体
+========================= */
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP",
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", YuGothic, Meiryo,
     sans-serif;
   background: #f5f7fa;
   color: #333;
@@ -12,7 +17,8 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font-family: inherit;
 }
 
@@ -24,224 +30,365 @@ button {
   min-height: 100vh;
 }
 
+/* =========================
+   ヘッダー
+========================= */
+
 .header {
-  padding: 22px 20px;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
-  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 14px 20px;
 }
 
 .logo {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.subtitle {
-  margin-top: 5px;
-  font-size: 12px;
-  color: #777;
+.logo-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
 }
+
+.logo-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.logo-subtitle {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* =========================
+   メイン
+========================= */
 
 .container {
   width: 100%;
-  max-width: 680px;
+  max-width: 760px;
   margin: 0 auto;
-  padding: 24px 16px 50px;
+  padding: 32px 20px 60px;
 }
 
+/* =========================
+   説明
+========================= */
+
 .intro {
-  margin-bottom: 22px;
+  text-align: center;
+  margin-bottom: 28px;
 }
 
 .intro h1 {
-  margin: 0 0 8px;
-  font-size: 26px;
+  margin: 0 0 10px;
+  font-size: 28px;
+  line-height: 1.4;
+  color: #111827;
 }
 
 .intro p {
   margin: 0;
-  line-height: 1.7;
-  color: #666;
-  font-size: 14px;
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 1.8;
 }
+
+/* =========================
+   カード
+========================= */
 
 .card {
-  margin-bottom: 18px;
-  padding: 20px;
   background: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 16px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.card h2 {
-  margin: 0 0 18px;
+/* =========================
+   セクションタイトル
+========================= */
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.section-title span {
+  font-size: 22px;
+}
+
+.section-title h2 {
+  margin: 0;
   font-size: 18px;
+  color: #111827;
 }
 
-label {
+.section-description {
+  margin: -8px 0 18px;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* =========================
+   フォーム
+========================= */
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
   display: block;
-  margin: 18px 0 8px;
+  margin-bottom: 8px;
   font-size: 14px;
-  font-weight: 700;
-}
-
-label:first-of-type {
-  margin-top: 0;
+  font-weight: 600;
+  color: #374151;
 }
 
 .required {
   display: inline-block;
-  margin-left: 5px;
+  margin-left: 7px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: #f3f4f6;
-  color: #666;
+  background: #fee2e2;
+  color: #dc2626;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 700;
+  vertical-align: middle;
 }
 
-input,
-textarea {
+/* =========================
+   input / select / textarea
+========================= */
+
+.form-group input,
+.form-group select,
+.form-group textarea {
   width: 100%;
-  border: 1px solid #d9dde3;
+  border: 1px solid #d1d5db;
   border-radius: 10px;
-  padding: 12px 13px;
+  background: #ffffff;
+  color: #111827;
   font-size: 15px;
   outline: none;
-  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-input:focus,
-textarea:focus {
-  border-color: #333;
+.form-group input,
+.form-group select {
+  height: 48px;
+  padding: 0 14px;
 }
 
-textarea {
-  resize: vertical;
+.form-group textarea {
+  min-height: 120px;
+  padding: 12px 14px;
   line-height: 1.7;
+  resize: vertical;
 }
 
-.button-grid {
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #9ca3af;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* =========================
+   ヘルプテキスト
+========================= */
+
+.help-text {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.6;
+}
+
+/* =========================
+   横並び
+========================= */
+
+.form-row {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* =========================
+   選択ボタン
+========================= */
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .select-button {
-  min-height: 44px;
-  border: 1px solid #dfe3e8;
-  border-radius: 10px;
-  background: #fff;
-  color: #444;
+  min-height: 42px;
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #374151;
   font-size: 13px;
+  transition: all 0.2s;
+}
+
+.select-button:hover {
+  border-color: #818cf8;
 }
 
 .select-button.active {
-  border-color: #333;
-  background: #333;
-  color: #fff;
-  font-weight: 700;
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 600;
 }
 
-.time-row {
+/* =========================
+   給与
+========================= */
+
+.input-with-unit {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: 12px;
 }
 
-.time-row input {
-  flex: 1;
+.input-with-unit input {
+  width: 220px;
 }
 
-.time-row span {
-  color: #777;
-}
-
-.wage-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.wage-row input {
-  flex: 1;
-}
-
-.wage-row span {
-  white-space: nowrap;
+.input-with-unit span {
   font-size: 15px;
+  color: #374151;
+  white-space: nowrap;
 }
 
-.description {
-  margin: -8px 0 14px;
-  color: #777;
-  font-size: 13px;
-  line-height: 1.6;
-}
+/* =========================
+   待遇・特徴
+========================= */
 
 .benefit-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
 }
 
 .benefit-button {
-  min-height: 46px;
-  padding: 8px;
-  border: 1px solid #dfe3e8;
-  border-radius: 10px;
-  background: #fff;
-  color: #444;
-  font-size: 13px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.4;
+  transition: all 0.2s;
+}
+
+.benefit-button:hover {
+  border-color: #818cf8;
 }
 
 .benefit-button.active {
-  border-color: #333;
-  background: #333;
-  color: #fff;
-  font-weight: 700;
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 600;
 }
 
-.ai-card {
-  border: 1px solid #e5e7eb;
+/* =========================
+   AI生成ボタン
+========================= */
+
+.generate-section {
+  text-align: center;
+  margin: 30px 0 40px;
 }
 
-.ai-card h2 {
-  margin-bottom: 12px;
-}
-
-.create-button {
+.generate-button {
   width: 100%;
   min-height: 58px;
   border: none;
   border-radius: 14px;
-  background: #111;
-  color: #fff;
-  font-size: 16px;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 17px;
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 5px 14px rgba(79, 70, 229, 0.25);
+  transition: transform 0.2s, opacity 0.2s, box-shadow 0.2s;
 }
 
-.create-button:active {
-  transform: translateY(1px);
+.generate-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 18px rgba(79, 70, 229, 0.3);
 }
 
-.create-button:disabled {
+.generate-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.generate-button:disabled {
   cursor: not-allowed;
   opacity: 0.7;
 }
 
+.generate-note {
+  margin: 10px 0 0;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+/* =========================
+   ローディング
+========================= */
+
 .spinner {
   display: inline-block;
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   margin-right: 8px;
   border: 2px solid rgba(255, 255, 255, 0.4);
-  border-top-color: #fff;
+  border-top-color: #ffffff;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
   vertical-align: -3px;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -250,32 +397,168 @@ textarea {
   }
 }
 
-.liff-warning {
-  margin-top: 14px;
-  text-align: center;
-  color: #888;
-  font-size: 11px;
+/* =========================
+   AI生成結果
+========================= */
+
+.generated-card {
+  border: 2px solid #c7d2fe;
+  background: #fafaff;
 }
 
-.footer-text {
-  margin: 35px 0 0;
-  text-align: center;
-  color: #999;
-  font-size: 11px;
-  line-height: 1.8;
+.generated-card textarea {
+  min-height: 500px;
+  background: #ffffff;
+  font-size: 14px;
 }
 
-@media (max-width: 480px) {
-  .container {
-    padding: 20px 12px 40px;
+/* =========================
+   生成結果ボタン
+========================= */
+
+.generated-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.secondary-button,
+.save-button {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.secondary-button {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+}
+
+.secondary-button:hover {
+  background: #f9fafb;
+}
+
+.save-button {
+  border: none;
+  background: #111827;
+  color: #ffffff;
+}
+
+.save-button:hover {
+  opacity: 0.9;
+}
+
+/* =========================
+   フッター
+========================= */
+
+.footer {
+  padding: 25px 20px 40px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.footer p {
+  margin: 0;
+}
+
+/* =========================
+   スマートフォン
+========================= */
+
+@media (max-width: 600px) {
+  .header-inner {
+    padding: 12px 16px;
   }
 
-  .card {
-    padding: 16px;
-    border-radius: 14px;
+  .container {
+    padding: 24px 14px 50px;
+  }
+
+  .intro {
+    margin-bottom: 22px;
   }
 
   .intro h1 {
     font-size: 23px;
+  }
+
+  .intro p {
+    font-size: 13px;
+  }
+
+  .card {
+    padding: 18px 16px;
+    border-radius: 14px;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    margin-bottom: 18px;
+  }
+
+  .section-title h2 {
+    font-size: 16px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .benefit-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .benefit-button {
+    font-size: 11px;
+    padding: 8px 6px;
+  }
+
+  .input-with-unit input {
+    width: 100%;
+  }
+
+  .generate-button {
+    min-height: 54px;
+    font-size: 15px;
+  }
+
+  .generated-actions {
+    flex-direction: column;
+  }
+
+  .secondary-button,
+  .save-button {
+    width: 100%;
+  }
+}
+
+/* =========================
+   小さいスマートフォン
+========================= */
+
+@media (max-width: 380px) {
+  .container {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .card {
+    padding: 16px 13px;
+  }
+
+  .benefit-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .select-button {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 }

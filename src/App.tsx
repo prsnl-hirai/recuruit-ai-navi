@@ -6,11 +6,13 @@ type JobForm = {
   storeName: string;
   industry: string;
   jobTitle: string;
+  jobDescription: string;
   employmentType: string;
   location: string;
   startTime: string;
   endTime: string;
-  hourlyWage: string;
+  salaryType: "時給" | "月給";
+  salary: string;
   benefits: string[];
   aiRequest: string;
 };
@@ -53,46 +55,65 @@ const benefitOptions = [
 ];
 
 function App() {
-  const [liffReady, setLiffReady] = useState(false);
-  const [loading, setLoading] = useState(false);
-
   const [form, setForm] = useState<JobForm>({
     storeName: "",
     industry: "",
     jobTitle: "",
+    jobDescription: "",
     employmentType: "アルバイト・パート",
     location: "",
     startTime: "",
     endTime: "",
-    hourlyWage: "",
+    salaryType: "時給",
+    salary: "",
     benefits: [],
     aiRequest: "",
   });
 
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedJob, setGeneratedJob] = useState("");
+
+  // LIFF初期化
   useEffect(() => {
     const initLiff = async () => {
       try {
-        // LIFF IDを自分のものに変更してください
+        // ★ここを実際のLIFF IDに変更してください
         await liff.init({
           liffId: "YOUR_LIFF_ID",
         });
 
-        setLiffReady(true);
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+
+        const profile = await liff.getProfile();
+
+        console.log("LINEユーザー:", profile.displayName);
+        console.log("LINEユーザーID:", profile.userId);
       } catch (error) {
-        console.error("LIFF initialization failed:", error);
+        console.error("LIFF initialization error:", error);
       }
     };
 
     initLiff();
   }, []);
 
-  const handleChange = (field: keyof JobForm, value: string) => {
+  // 入力変更
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+
     setForm((prev) => ({
       ...prev,
-      [field]: value,
+      [name]: value,
     }));
   };
 
+  // 待遇・特徴の選択
   const toggleBenefit = (benefit: string) => {
     setForm((prev) => {
       const exists = prev.benefits.includes(benefit);
@@ -106,208 +127,336 @@ function App() {
     });
   };
 
+  // AIで求人票を作成
   const createJob = async () => {
-    if (!form.storeName) {
-      alert("店舗名を入力してください。");
+    if (!form.storeName.trim()) {
+      alert("店舗名・会社名を入力してください");
       return;
     }
 
     if (!form.industry) {
-      alert("業種を選択してください。");
+      alert("業種を選択してください");
       return;
     }
 
-    if (!form.jobTitle) {
-      alert("応募職種を入力してください。");
+    if (!form.jobTitle.trim()) {
+      alert("募集職種を入力してください");
       return;
     }
 
-    if (!form.location) {
-      alert("勤務地を入力してください。");
+    if (!form.jobDescription.trim()) {
+      alert("仕事内容を入力してください");
       return;
     }
 
-    if (!form.hourlyWage) {
-      alert("時給を入力してください。");
+    if (!form.location.trim()) {
+      alert("勤務地を入力してください");
       return;
     }
 
-    setLoading(true);
+    if (!form.salary.trim()) {
+      alert(`${form.salaryType}を入力してください`);
+      return;
+    }
+
+    setIsGenerating(true);
+    setGeneratedJob("");
 
     try {
-      /*
-       * 後でバックエンドを作ったら、
-       * ここからOpenAI APIを呼び出します。
-       *
-       * 例：
-       *
-       * const response = await fetch(
-       *   "https://あなたのAPI/api/jobs/generate",
-       *   {
-       *     method: "POST",
-       *     headers: {
-       *       "Content-Type": "application/json",
-       *     },
-       *     body: JSON.stringify(form),
-       *   }
-       * );
-       *
-       * const result = await response.json();
-       */
+      const response = await fetch("http://localhost:5001/api/generate-job", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
 
-      console.log("求人情報:", form);
+      if (!response.ok) {
+        throw new Error("求人生成APIの呼び出しに失敗しました");
+      }
 
-      // 現段階では確認用
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || "求人の生成に失敗しました");
+      }
+
+      setGeneratedJob(data.job);
+
+      // AI生成結果までスクロール
+      setTimeout(() => {
+        document.getElementById("generated-job")?.scrollIntoView({
+          behavior: "smooth",
+        });
+      }, 100);
+    } catch (error) {
+      console.error("求人生成エラー:", error);
 
       alert(
-        "求人情報を受け付けました！\n次のステップでAIが求人票を作成します。"
+        "求人の作成に失敗しました。\n" +
+          "バックエンドAPIが起動しているか確認してください。"
       );
-    } catch (error) {
-      console.error(error);
-      alert("求人作成中にエラーが発生しました。");
     } finally {
-      setLoading(false);
+      setIsGenerating(false);
     }
   };
 
   return (
     <div className="app">
+      {/* ヘッダー */}
+      <header className="header">
+        <div className="header-inner">
+          <div className="logo">
+            <span className="logo-icon">🤖</span>
+
+            <div>
+              <div className="logo-title">求人AIナビ</div>
+
+              <div className="logo-subtitle">AIが求人作成をサポート</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
       <main className="container">
+        {/* 説明 */}
         <section className="intro">
-          <h1>求人を作成する</h1>
+          <h1>求人を作成しましょう</h1>
+
           <p>
-            かんたんな質問に答えるだけ。
+            いくつかの質問に答えるだけで、
             <br />
-            AIが応募したくなる求人票を作成します。
+            AIが応募されやすい求人票を作成します。
           </p>
         </section>
 
-        {/* 基本情報 */}
+        {/* 店舗・会社情報 */}
         <section className="card">
-          <h2>店舗・会社情報</h2>
+          <div className="section-title">
+            <span>🏢</span>
+            <h2>店舗・会社情報</h2>
+          </div>
 
-          <label>
-            店舗名 <span className="required">必須</span>
-          </label>
+          <div className="form-group">
+            <label>
+              店舗名・会社名
+              <span className="required">必須</span>
+            </label>
 
-          <input
-            type="text"
-            placeholder="例：カフェ〇〇"
-            value={form.storeName}
-            onChange={(e) => handleChange("storeName", e.target.value)}
-          />
+            <input
+              type="text"
+              name="storeName"
+              value={form.storeName}
+              onChange={handleChange}
+              placeholder="例：カフェ○○"
+            />
+          </div>
 
-          <label>
-            業種 <span className="required">必須</span>
-          </label>
+          <div className="form-group">
+            <label>
+              業種
+              <span className="required">必須</span>
+            </label>
 
-          <div className="button-grid">
-            {industries.map((industry) => (
-              <button
-                key={industry}
-                type="button"
-                className={
-                  form.industry === industry
-                    ? "select-button active"
-                    : "select-button"
-                }
-                onClick={() => handleChange("industry", industry)}
-              >
-                {industry}
-              </button>
-            ))}
+            <select
+              name="industry"
+              value={form.industry}
+              onChange={handleChange}
+            >
+              <option value="">業種を選択してください</option>
+
+              {industries.map((industry) => (
+                <option key={industry} value={industry}>
+                  {industry}
+                </option>
+              ))}
+            </select>
           </div>
         </section>
 
         {/* 募集内容 */}
         <section className="card">
-          <h2>募集内容</h2>
+          <div className="section-title">
+            <span>👤</span>
+            <h2>募集内容</h2>
+          </div>
 
-          <label>
-            応募職種 <span className="required">必須</span>
-          </label>
+          <div className="form-group">
+            <label>
+              募集職種
+              <span className="required">必須</span>
+            </label>
 
-          <input
-            type="text"
-            placeholder="例：ホールスタッフ"
-            value={form.jobTitle}
-            onChange={(e) => handleChange("jobTitle", e.target.value)}
-          />
+            <input
+              type="text"
+              name="jobTitle"
+              value={form.jobTitle}
+              onChange={handleChange}
+              placeholder="例：ホールスタッフ"
+            />
+          </div>
 
-          <label>雇用形態</label>
+          <div className="form-group">
+            <label>
+              仕事内容
+              <span className="required">必須</span>
+            </label>
 
-          <div className="button-grid">
-            {employmentTypes.map((type) => (
-              <button
-                key={type}
-                type="button"
-                className={
-                  form.employmentType === type
-                    ? "select-button active"
-                    : "select-button"
-                }
-                onClick={() => handleChange("employmentType", type)}
-              >
-                {type}
-              </button>
-            ))}
+            <textarea
+              name="jobDescription"
+              value={form.jobDescription}
+              onChange={handleChange}
+              placeholder="例：お客様のご案内、料理の提供、レジ対応などをお願いします。"
+              rows={5}
+            />
+
+            <p className="help-text">
+              箇条書きでも大丈夫です。AIが読みやすい求人文章に整えます。
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label>雇用形態</label>
+
+            <div className="button-group">
+              {employmentTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={
+                    form.employmentType === type
+                      ? "select-button active"
+                      : "select-button"
+                  }
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      employmentType: type,
+                    }))
+                  }
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* 勤務条件 */}
         <section className="card">
-          <h2>勤務条件</h2>
+          <div className="section-title">
+            <span>📍</span>
+            <h2>勤務条件</h2>
+          </div>
 
-          <label>
-            勤務地 <span className="required">必須</span>
-          </label>
-
-          <input
-            type="text"
-            placeholder="例：愛知県名古屋市中区栄1-1-1"
-            value={form.location}
-            onChange={(e) => handleChange("location", e.target.value)}
-          />
-
-          <label>勤務時間</label>
-
-          <div className="time-row">
-            <input
-              type="time"
-              value={form.startTime}
-              onChange={(e) => handleChange("startTime", e.target.value)}
-            />
-
-            <span>〜</span>
+          <div className="form-group">
+            <label>
+              勤務地
+              <span className="required">必須</span>
+            </label>
 
             <input
-              type="time"
-              value={form.endTime}
-              onChange={(e) => handleChange("endTime", e.target.value)}
+              type="text"
+              name="location"
+              value={form.location}
+              onChange={handleChange}
+              placeholder="例：愛知県名古屋市中区"
             />
           </div>
 
-          <label>
-            時給 <span className="required">必須</span>
-          </label>
+          <div className="form-row">
+            <div className="form-group">
+              <label>勤務開始時間</label>
 
-          <div className="wage-row">
-            <input
-              type="number"
-              placeholder="1,200"
-              value={form.hourlyWage}
-              onChange={(e) => handleChange("hourlyWage", e.target.value)}
-            />
-            <span>円〜</span>
+              <input
+                type="time"
+                name="startTime"
+                value={form.startTime}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>勤務終了時間</label>
+
+              <input
+                type="time"
+                name="endTime"
+                value={form.endTime}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* 給与 */}
+          <div className="form-group">
+            <label>
+              給与
+              <span className="required">必須</span>
+            </label>
+
+            <div className="button-group">
+              <button
+                type="button"
+                className={
+                  form.salaryType === "時給"
+                    ? "select-button active"
+                    : "select-button"
+                }
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    salaryType: "時給",
+                    salary: "",
+                  }))
+                }
+              >
+                時給
+              </button>
+
+              <button
+                type="button"
+                className={
+                  form.salaryType === "月給"
+                    ? "select-button active"
+                    : "select-button"
+                }
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    salaryType: "月給",
+                    salary: "",
+                  }))
+                }
+              >
+                月給
+              </button>
+            </div>
+
+            <div className="input-with-unit">
+              <input
+                type="number"
+                name="salary"
+                value={form.salary}
+                onChange={handleChange}
+                placeholder={form.salaryType === "時給" ? "1200" : "250000"}
+              />
+
+              <span>円</span>
+            </div>
           </div>
         </section>
 
-        {/* 待遇 */}
+        {/* 待遇・特徴 */}
         <section className="card">
-          <h2>待遇・特徴</h2>
+          <div className="section-title">
+            <span>✨</span>
+            <h2>待遇・特徴</h2>
+          </div>
 
-          <p className="description">当てはまるものを選択してください。</p>
+          <p className="section-description">
+            当てはまるものを選択してください。
+          </p>
 
           <div className="benefit-grid">
             {benefitOptions.map((benefit) => {
@@ -322,7 +471,7 @@ function App() {
                   }
                   onClick={() => toggleBenefit(benefit)}
                 >
-                  {selected && "✓ "}
+                  {selected ? "✓ " : ""}
                   {benefit}
                 </button>
               );
@@ -331,54 +480,102 @@ function App() {
         </section>
 
         {/* AIへのリクエスト */}
-        <section className="card ai-card">
-          <h2>✨ AIへのリクエスト</h2>
+        <section className="card">
+          <div className="section-title">
+            <span>🤖</span>
+            <h2>AIへのリクエスト</h2>
+          </div>
 
-          <p className="description">
-            求人票に入れてほしいことや、
-            お店のアピールポイントを自由に入力してください。
+          <p className="section-description">
+            どんな人に応募してほしいか、
+            求人でアピールしたいことなどを自由に入力してください。
           </p>
 
-          <textarea
-            rows={6}
-            placeholder={
-              "例：\n" +
-              "学生さんにたくさん応募してほしいです。\n" +
-              "スタッフ同士が仲が良いことをアピールしてください。\n" +
-              "未経験でも安心して働けることを伝えてください。"
-            }
-            value={form.aiRequest}
-            onChange={(e) => handleChange("aiRequest", e.target.value)}
-          />
+          <div className="form-group">
+            <textarea
+              name="aiRequest"
+              value={form.aiRequest}
+              onChange={handleChange}
+              placeholder={
+                "例：学生さんにたくさん応募してほしいです。\n" +
+                "スタッフ同士が仲が良いことをアピールしてください。\n" +
+                "未経験でも安心して働けることを伝えてください。"
+              }
+              rows={7}
+            />
+          </div>
         </section>
 
-        {/* 作成ボタン */}
-        <button
-          type="button"
-          className="create-button"
-          onClick={createJob}
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <span className="spinner"></span>
-              AIが求人票を作成しています...
-            </>
-          ) : (
-            <>✨ AIで求人票を作成</>
-          )}
-        </button>
+        {/* AI生成ボタン */}
+        <section className="generate-section">
+          <button
+            type="button"
+            className="generate-button"
+            onClick={createJob}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <>
+                <span className="spinner"></span>
+                AIが求人票を作成しています...
+              </>
+            ) : (
+              <>✨ AIで求人票を作成</>
+            )}
+          </button>
 
-        {!liffReady && (
-          <p className="liff-warning">※ LIFFの初期化を確認中です</p>
+          <p className="generate-note">
+            入力内容をAIが整理して、 応募されやすい求人票を作成します。
+          </p>
+        </section>
+
+        {/* AI生成結果 */}
+        {generatedJob && (
+          <section id="generated-job" className="card generated-card">
+            <div className="section-title">
+              <span>🎉</span>
+              <h2>AIが作成した求人票</h2>
+            </div>
+
+            <p className="section-description">
+              内容を確認して、必要に応じて編集してください。
+            </p>
+
+            <div className="form-group">
+              <textarea
+                value={generatedJob}
+                onChange={(e) => setGeneratedJob(e.target.value)}
+                rows={25}
+              />
+            </div>
+
+            <div className="generated-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setGeneratedJob("")}
+              >
+                作り直す
+              </button>
+
+              <button
+                type="button"
+                className="save-button"
+                onClick={() => {
+                  alert("保存処理はこれから実装します。");
+                }}
+              >
+                💾 この求人を保存
+              </button>
+            </div>
+          </section>
         )}
-
-        <p className="footer-text">
-          求人AIナビ
-          <br />
-          AIで、もっと伝わる求人へ。
-        </p>
       </main>
+
+      {/* フッター */}
+      <footer className="footer">
+        <p>求人AIナビ</p>
+      </footer>
     </div>
   );
 }
