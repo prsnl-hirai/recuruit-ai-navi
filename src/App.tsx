@@ -79,7 +79,7 @@ function App() {
       try {
         // ★ここを実際のLIFF IDに変更してください
         await liff.init({
-          liffId: "YOUR_LIFF_ID",
+          liffId: "2011376548-9M89rhkF",
         });
 
         if (!liff.isLoggedIn()) {
@@ -163,7 +163,7 @@ function App() {
     setGeneratedJob("");
 
     try {
-      const response = await fetch("/api/generate-job", {
+      const response = await fetch("http://localhost:5001/api/generate-job", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
