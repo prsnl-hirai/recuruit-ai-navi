@@ -77,20 +77,20 @@ function App() {
   useEffect(() => {
     const initLiff = async () => {
       try {
-        // ★ここを実際のLIFF IDに変更してください
         await liff.init({
-          liffId: "2011376548-9M89rhkF",
+          liffId: "あなたの実際のLIFF_ID",
         });
+
+        console.log("LIFF initialized");
+        console.log("isLoggedIn:", liff.isLoggedIn());
+        console.log("isInClient:", liff.isInClient());
 
         if (!liff.isLoggedIn()) {
           liff.login();
           return;
         }
 
-        const profile = await liff.getProfile();
-
-        console.log("LINEユーザー:", profile.displayName);
-        console.log("LINEユーザーID:", profile.userId);
+        console.log("LINEログイン成功");
       } catch (error) {
         console.error("LIFF initialization error:", error);
       }
@@ -207,7 +207,7 @@ function App() {
       <header className="header">
         <div className="header-inner">
           <div className="logo">
-            <span className="logo-icon">🤖</span>
+            {/* <span className="logo-icon">🤖</span> */}
 
             <div>
               <div className="logo-title">求人AIナビ</div>
