@@ -173,11 +173,6 @@ function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <div className="logo">求人AIナビ</div>
-        <div className="subtitle">AIがあなたの求人票を作成します</div>
-      </header>
-
       <main className="container">
         <section className="intro">
           <h1>求人を作成する</h1>
