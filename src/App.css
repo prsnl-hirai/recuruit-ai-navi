@@ -1,160 +1,164 @@
-/* =========================
-   全体
-========================= */
+/* ========================================
+   求人AIナビ
+   App.css
+======================================== */
 
 * {
   box-sizing: border-box;
 }
 
-body {
+html,
+body,
+#root {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-    "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", YuGothic, Meiryo,
-    sans-serif;
-  background: #f5f7fa;
-  color: #333;
+  min-height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP",
+    "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+
+  background: #f5f7fb;
+  color: #1f2937;
+  line-height: 1.6;
 }
 
 button,
 input,
 textarea,
 select {
-  font-family: inherit;
+  font: inherit;
 }
 
-button {
-  cursor: pointer;
-}
-
-.app {
-  min-height: 100vh;
-}
-
-/* =========================
-   ヘッダー
-========================= */
+/* ========================================
+   Header
+======================================== */
 
 .header {
+  width: 100%;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 100;
 }
 
 .header-inner {
-  max-width: 760px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 14px 20px;
-}
+  min-height: 72px;
+  padding: 12px 24px;
 
-.logo {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .logo-icon {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
-  background: #4f46e5;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+
+  background: #eef2ff;
+  font-size: 23px;
 }
 
 .logo-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 800;
   color: #111827;
+  line-height: 1.2;
 }
 
 .logo-subtitle {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
+  line-height: 1.2;
 }
 
-/* =========================
-   メイン
-========================= */
-
-.container {
-  width: 100%;
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 32px 20px 60px;
-}
-
-/* =========================
-   説明
-========================= */
+/* ========================================
+   Intro
+======================================== */
 
 .intro {
-  text-align: center;
-  margin-bottom: 28px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 34px 24px 24px;
 }
 
 .intro h1 {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-size: 28px;
-  line-height: 1.4;
+  line-height: 1.35;
+  font-weight: 800;
   color: #111827;
 }
 
 .intro p {
   margin: 0;
   color: #6b7280;
-  font-size: 15px;
-  line-height: 1.8;
+  font-size: 14px;
 }
 
-/* =========================
-   カード
-========================= */
+/* ========================================
+   Container
+======================================== */
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px 60px;
+}
+
+/* ========================================
+   Card
+======================================== */
 
 .card {
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 24px;
+  border-radius: 18px;
+  padding: 28px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
 
-/* =========================
-   セクションタイトル
-========================= */
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
 
 .section-title {
+  margin: 0 0 22px;
+
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 22px;
-}
+  gap: 8px;
 
-.section-title span {
-  font-size: 22px;
-}
-
-.section-title h2 {
-  margin: 0;
-  font-size: 18px;
+  font-size: 19px;
+  font-weight: 800;
   color: #111827;
 }
 
-.section-description {
-  margin: -8px 0 18px;
-  color: #6b7280;
-  font-size: 13px;
-  line-height: 1.7;
+.section-title::before {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 22px;
+  border-radius: 999px;
+  background: #6366f1;
 }
 
-/* =========================
-   フォーム
-========================= */
+/* ========================================
+   Form
+======================================== */
 
 .form-group {
   margin-bottom: 20px;
@@ -166,80 +170,64 @@ button {
 
 .form-group label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
+
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: #374151;
 }
 
 .required {
   display: inline-block;
-  margin-left: 7px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: #fee2e2;
-  color: #dc2626;
-  font-size: 10px;
+  margin-left: 6px;
+
+  color: #ef4444;
+  font-size: 11px;
   font-weight: 700;
-  vertical-align: middle;
 }
 
-/* =========================
-   input / select / textarea
-========================= */
+.help-text {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: #9ca3af;
+}
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+input,
+textarea,
+select {
   width: 100%;
   border: 1px solid #d1d5db;
   border-radius: 10px;
   background: #ffffff;
   color: #111827;
-  font-size: 15px;
+
+  padding: 11px 13px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background 0.15s ease;
 }
 
-.form-group input,
-.form-group select {
-  height: 48px;
-  padding: 0 14px;
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
 }
 
-.form-group textarea {
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+textarea {
   min-height: 120px;
-  padding: 12px 14px;
-  line-height: 1.7;
   resize: vertical;
 }
 
-.form-group input::placeholder,
-.form-group textarea::placeholder {
-  color: #9ca3af;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-
-/* =========================
-   ヘルプテキスト
-========================= */
-
-.help-text {
-  margin: 7px 0 0;
-  font-size: 12px;
-  color: #9ca3af;
-  line-height: 1.6;
-}
-
-/* =========================
-   横並び
-========================= */
+/* ========================================
+   Form Row
+======================================== */
 
 .form-row {
   display: grid;
@@ -247,62 +235,87 @@ button {
   gap: 16px;
 }
 
-/* =========================
-   選択ボタン
-========================= */
-
-.button-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.select-button {
-  min-height: 42px;
-  padding: 8px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 9px;
-  background: #ffffff;
-  color: #374151;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-
-.select-button:hover {
-  border-color: #818cf8;
-}
-
-.select-button.active {
-  border-color: #4f46e5;
-  background: #eef2ff;
-  color: #4338ca;
-  font-weight: 600;
-}
-
-/* =========================
-   給与
-========================= */
+/* ========================================
+   Input + Unit
+======================================== */
 
 .input-with-unit {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 12px;
 }
 
 .input-with-unit input {
-  width: 220px;
+  padding-right: 55px;
 }
 
-.input-with-unit span {
-  font-size: 15px;
-  color: #374151;
-  white-space: nowrap;
+.input-with-unit::after {
+  content: "円";
+  position: absolute;
+  right: 13px;
+  color: #6b7280;
+  font-size: 13px;
+  pointer-events: none;
 }
 
-/* =========================
-   待遇・特徴
-========================= */
+/* ========================================
+   Button Group
+======================================== */
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.select-button {
+  flex: 1;
+  min-width: 130px;
+
+  padding: 11px 16px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+
+  background: #ffffff;
+  color: #4b5563;
+
+  cursor: pointer;
+  font-weight: 700;
+
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.select-button:hover {
+  border-color: #a5b4fc;
+  background: #f8f8ff;
+}
+
+.select-button:active {
+  transform: translateY(1px);
+}
+
+.select-button.active {
+  border-color: #6366f1;
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+/* ========================================
+   Section Description
+======================================== */
+
+.section-description {
+  margin: -12px 0 20px;
+
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* ========================================
+   Benefits
+======================================== */
 
 .benefit-grid {
   display: grid;
@@ -312,197 +325,518 @@ button {
 
 .benefit-button {
   min-height: 44px;
-  padding: 8px 10px;
+  padding: 9px 10px;
+
   border: 1px solid #d1d5db;
   border-radius: 9px;
+
   background: #ffffff;
-  color: #374151;
-  font-size: 12px;
-  line-height: 1.4;
-  transition: all 0.2s;
+  color: #4b5563;
+
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .benefit-button:hover {
-  border-color: #818cf8;
+  border-color: #a5b4fc;
+  background: #f8f8ff;
 }
 
 .benefit-button.active {
-  border-color: #4f46e5;
+  border-color: #6366f1;
   background: #eef2ff;
-  color: #4338ca;
-  font-weight: 600;
+  color: #4f46e5;
 }
 
-/* =========================
-   AI生成ボタン
-========================= */
+/* ========================================
+   Generate
+======================================== */
 
 .generate-section {
+  margin-top: 28px;
   text-align: center;
-  margin: 30px 0 40px;
 }
 
 .generate-button {
   width: 100%;
-  min-height: 58px;
+  max-width: 500px;
+
+  min-height: 56px;
+  padding: 14px 24px;
+
   border: none;
-  border-radius: 14px;
+  border-radius: 12px;
+
   background: #4f46e5;
   color: #ffffff;
-  font-size: 17px;
-  font-weight: 700;
-  box-shadow: 0 5px 14px rgba(79, 70, 229, 0.25);
-  transition: transform 0.2s, opacity 0.2s, box-shadow 0.2s;
+
+  font-size: 16px;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.22);
+
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.generate-button:hover:not(:disabled) {
+.generate-button:hover {
+  background: #4338ca;
   transform: translateY(-1px);
-  box-shadow: 0 7px 18px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.28);
 }
 
-.generate-button:active:not(:disabled) {
+.generate-button:active {
   transform: translateY(0);
 }
 
 .generate-button:disabled {
   cursor: not-allowed;
   opacity: 0.7;
+  transform: none;
+  box-shadow: none;
 }
 
 .generate-note {
-  margin: 10px 0 0;
-  color: #9ca3af;
+  margin: 12px 0 0;
+
   font-size: 12px;
+  color: #9ca3af;
 }
 
-/* =========================
-   ローディング
-========================= */
+/* ========================================
+   Spinner
+======================================== */
 
 .spinner {
   display: inline-block;
+
   width: 17px;
   height: 17px;
+
   margin-right: 8px;
+
   border: 2px solid rgba(255, 255, 255, 0.4);
   border-top-color: #ffffff;
+
   border-radius: 50%;
-  vertical-align: -3px;
-  animation: spin 0.8s linear infinite;
+
+  vertical-align: -4px;
+
+  animation: spinner 0.7s linear infinite;
 }
 
-@keyframes spin {
+@keyframes spinner {
   to {
     transform: rotate(360deg);
   }
 }
 
-/* =========================
-   AI生成結果
-========================= */
+/* ========================================
+   Generated Result
+======================================== */
 
 .generated-card {
-  border: 2px solid #c7d2fe;
-  background: #fafaff;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 28px;
+  margin-top: 24px;
+
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
 }
 
-.generated-card textarea {
-  min-height: 500px;
-  background: #ffffff;
+.generated-card > .section-title {
+  margin-bottom: 26px;
+}
+
+.result-block {
+  padding: 20px 0;
+  border-top: 1px solid #eef0f3;
+}
+
+.result-block:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.result-block h3 {
+  margin: 0 0 12px;
+
+  font-size: 15px;
+  font-weight: 800;
+  color: #374151;
+}
+
+.result-block p {
+  margin: 0;
+  white-space: pre-wrap;
+  color: #4b5563;
   font-size: 14px;
 }
 
-/* =========================
-   生成結果ボタン
-========================= */
+/* ========================================
+   Nearest Station
+======================================== */
+
+.station-list {
+  display: grid;
+  gap: 10px;
+}
+
+.station-item {
+  padding: 14px 16px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  background: #f9fafb;
+}
+
+.station-item strong {
+  display: block;
+  margin-bottom: 2px;
+
+  color: #111827;
+  font-size: 14px;
+}
+
+.station-item span {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.station-item .distance {
+  margin-top: 5px;
+  color: #4f46e5;
+  font-weight: 700;
+}
+
+/* ========================================
+   Score
+======================================== */
+
+.score-total {
+  text-align: center;
+  padding: 10px 0 24px;
+}
+
+.score-total strong {
+  display: block;
+
+  font-size: 54px;
+  line-height: 1;
+
+  font-weight: 900;
+  color: #4f46e5;
+}
+
+.score-total span {
+  display: block;
+  margin-top: 8px;
+
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.score-grid > div {
+  padding: 13px 10px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  background: #f9fafb;
+  text-align: center;
+}
+
+.score-grid span {
+  display: block;
+  margin-bottom: 4px;
+
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.score-grid strong {
+  font-size: 18px;
+  color: #111827;
+}
+
+/* ========================================
+   Market Summary
+======================================== */
+
+.result-block ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.result-block li {
+  margin-bottom: 8px;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.result-block li:last-child {
+  margin-bottom: 0;
+}
+
+/* ========================================
+   Improvement Points
+======================================== */
+
+.improvement-item {
+  position: relative;
+
+  padding: 17px 18px 17px 20px;
+  margin-bottom: 10px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 11px;
+
+  background: #ffffff;
+}
+
+.improvement-item:last-child {
+  margin-bottom: 0;
+}
+
+.improvement-priority {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 34px;
+  height: 24px;
+
+  margin-bottom: 7px;
+
+  border-radius: 999px;
+
+  background: #eef2ff;
+  color: #4f46e5;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.improvement-item h4 {
+  margin: 0 0 6px;
+
+  font-size: 14px;
+  color: #111827;
+}
+
+.improvement-item p {
+  margin: 4px 0 0;
+
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.improvement-item p strong {
+  color: #374151;
+}
+
+/* ========================================
+   Generated Job
+======================================== */
+
+.generated-job {
+  padding: 24px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+
+  background: #f9fafb;
+}
+
+.generated-job h2 {
+  margin: 0 0 14px;
+
+  font-size: 22px;
+  line-height: 1.4;
+  color: #111827;
+}
+
+.catch-copy {
+  margin: 0 0 22px;
+
+  padding: 14px 16px;
+
+  border-left: 4px solid #6366f1;
+
+  background: #eef2ff;
+  color: #3730a3;
+
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.generated-job section {
+  margin-bottom: 20px;
+}
+
+.generated-job section:last-child {
+  margin-bottom: 0;
+}
+
+.generated-job section h3 {
+  margin: 0 0 7px;
+
+  font-size: 14px;
+  font-weight: 800;
+  color: #374151;
+}
+
+.generated-job section p {
+  margin: 0;
+
+  white-space: pre-wrap;
+
+  font-size: 14px;
+  color: #4b5563;
+}
+
+/* ========================================
+   Generated Actions
+======================================== */
 
 .generated-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 16px;
+  justify-content: center;
+  gap: 12px;
+
+  margin-top: 24px;
 }
 
 .secondary-button,
 .save-button {
-  flex: 1;
-  min-height: 48px;
+  min-width: 180px;
+
+  padding: 12px 18px;
+
   border-radius: 10px;
+
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition: background 0.15s ease, border-color 0.15s ease,
+    transform 0.1s ease;
 }
 
 .secondary-button {
   border: 1px solid #d1d5db;
   background: #ffffff;
-  color: #374151;
+  color: #4b5563;
 }
 
 .secondary-button:hover {
   background: #f9fafb;
+  border-color: #9ca3af;
 }
 
 .save-button {
-  border: none;
-  background: #111827;
+  border: 1px solid #4f46e5;
+  background: #4f46e5;
   color: #ffffff;
 }
 
 .save-button:hover {
-  opacity: 0.9;
+  background: #4338ca;
+  border-color: #4338ca;
 }
 
-/* =========================
-   フッター
-========================= */
+.secondary-button:active,
+.save-button:active {
+  transform: translateY(1px);
+}
+
+/* ========================================
+   Footer
+======================================== */
 
 .footer {
-  padding: 25px 20px 40px;
+  max-width: 900px;
+  margin: 0 auto;
+
+  padding: 20px 24px 35px;
+
   text-align: center;
+
   color: #9ca3af;
-  font-size: 12px;
+  font-size: 11px;
 }
 
-.footer p {
-  margin: 0;
+/* ========================================
+   Error
+======================================== */
+
+.error-message {
+  margin: 16px 0;
+  padding: 13px 15px;
+
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+
+  background: #fef2f2;
+  color: #b91c1c;
+
+  font-size: 13px;
 }
 
-/* =========================
-   スマートフォン
-========================= */
+/* ========================================
+   Responsive
+======================================== */
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .header-inner {
-    padding: 12px 16px;
+    min-height: 62px;
+    padding: 10px 16px;
   }
 
-  .container {
-    padding: 24px 14px 50px;
+  .logo-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    font-size: 20px;
+  }
+
+  .logo-title {
+    font-size: 17px;
   }
 
   .intro {
-    margin-bottom: 22px;
+    padding: 25px 16px 18px;
   }
 
   .intro h1 {
     font-size: 23px;
   }
 
-  .intro p {
-    font-size: 13px;
+  .container {
+    padding: 0 16px 40px;
   }
 
-  .card {
-    padding: 18px 16px;
+  .card,
+  .generated-card {
+    padding: 20px 16px;
     border-radius: 14px;
-    margin-bottom: 14px;
   }
 
   .section-title {
-    margin-bottom: 18px;
-  }
-
-  .section-title h2 {
-    font-size: 16px;
+    font-size: 17px;
   }
 
   .form-row {
@@ -512,21 +846,18 @@ button {
 
   .benefit-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
   }
 
-  .benefit-button {
-    font-size: 11px;
-    padding: 8px 6px;
+  .score-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .input-with-unit input {
-    width: 100%;
+  .generated-job {
+    padding: 18px;
   }
 
-  .generate-button {
-    min-height: 54px;
-    font-size: 15px;
+  .generated-job h2 {
+    font-size: 19px;
   }
 
   .generated-actions {
@@ -536,29 +867,34 @@ button {
   .secondary-button,
   .save-button {
     width: 100%;
+    min-width: 0;
   }
 }
 
-/* =========================
-   小さいスマートフォン
-========================= */
+/* ========================================
+   Small Mobile
+======================================== */
 
-@media (max-width: 380px) {
-  .container {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-
-  .card {
-    padding: 16px 13px;
+@media (max-width: 400px) {
+  .intro h1 {
+    font-size: 21px;
   }
 
   .benefit-grid {
     grid-template-columns: 1fr 1fr;
+    gap: 7px;
   }
 
-  .select-button {
-    padding-left: 12px;
-    padding-right: 12px;
+  .benefit-button {
+    font-size: 12px;
+    padding: 8px 5px;
+  }
+
+  .score-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .score-grid > div {
+    padding: 11px 6px;
   }
 }

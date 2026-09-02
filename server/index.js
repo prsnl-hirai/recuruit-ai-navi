@@ -142,7 +142,9 @@ ${job.salaryType} ${job.salary}円
 【待遇・特徴】
 
 ${
-  job.benefits && job.benefits.length > 0 ? job.benefits.join("、") : "特になし"
+  job.benefits && job.benefits?.length > 0
+    ? job.benefits.join("、")
+    : "特になし"
 }
 
 
