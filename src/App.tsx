@@ -693,35 +693,6 @@ function App() {
               <h2>AI分析結果</h2>
             </div>
 
-            {/* 最寄り駅 */}
-            <div className="result-block">
-              <h3>🚃 最寄り駅候補</h3>
-
-              {result.nearestStations?.length > 0 ? (
-                <div className="station-list">
-                  {result.nearestStations.map((station, index) => (
-                    <div
-                      className="station-item"
-                      key={`${station.stationName}-${index}`}
-                    >
-                      <strong>{station.stationName}</strong>
-
-                      <span>{station.lineName}</span>
-
-                      <span>{station.estimatedDistance}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>最寄り駅を特定できませんでした。</p>
-              )}
-
-              <p className="help-text">
-                ※最寄り駅はAIによる推定です。
-                掲載前に実際の駅・距離をご確認ください。
-              </p>
-            </div>
-
             {/* スコア */}
             <div className="result-block">
               <h3>🎯 求人AIスコア</h3>
@@ -745,16 +716,6 @@ function App() {
                 <div>
                   <span>待遇</span>
                   <strong>{result.score?.benefits ?? 0}</strong>
-                </div>
-
-                <div>
-                  <span>アクセス</span>
-                  <strong>{result.score?.accessibility ?? 0}</strong>
-                </div>
-
-                <div>
-                  <span>タイトル</span>
-                  <strong>{result.score?.title ?? 0}</strong>
                 </div>
 
                 <div>
