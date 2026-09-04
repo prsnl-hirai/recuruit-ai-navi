@@ -229,16 +229,16 @@ const holidaysOptions = [
   "会社カレンダーによる",
 ];
 
-const minDaysOptions = ["週1日～", "週2日～", "週3日～", "週4日～", "週5日～"];
+const minDaysOptions = ["1日～", "2日～", "3日～", "4日～", "5日～"];
 
 const minHoursOptions = [
-  "1日2時間～",
-  "1日3時間～",
-  "1日4時間～",
-  "1日5時間～",
-  "1日6時間～",
-  "1日7時間～",
-  "1日8時間～",
+  "2時間～",
+  "3時間～",
+  "4時間～",
+  "5時間～",
+  "6時間～",
+  "7時間～",
+  "8時間～",
 ];
 
 const overtimeOptions = [
@@ -402,8 +402,8 @@ const initialForm: JobForm = {
   endTime: "",
   breakTime: "60分",
   holidays: "シフト制",
-  minDaysPerWeek: "週2日～",
-  minHoursPerDay: "1日3時間～",
+  minDaysPerWeek: "",
+  minHoursPerDay: "",
   overtime: "ほぼなし",
   shiftExample: "",
 
@@ -465,6 +465,12 @@ function App() {
 
   /* 結果 */
   const [result, setResult] = useState<AnalysisResult | null>(null);
+
+  /* 保存 */
+  const [saving, setSaving] = useState(false);
+
+  /* 求人ID */
+  const [savedJobId, setSavedJobId] = useState<number | null>(null);
 
   /* エラー */
   const [errorMessage, setErrorMessage] = useState("");
@@ -789,29 +795,203 @@ function App() {
   };
 
   /* ========================================
-     Reset
+    求人保存
   ======================================== */
 
-  const handleReset = () => {
-    setResult(null);
-    setErrorMessage("");
+  const handleSaveJob = async (status: "0" | "1" = "0") => {
+    if (!result) {
+      setErrorMessage("保存する求人情報がありません。");
+      return;
+    }
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    try {
+      setSaving(true);
+      setErrorMessage("");
+
+      /*
+      仕事内容は、
+      AI生成時と同じように
+      選択項目 + その他入力をまとめる
+    */
+      const selectedDescription = [
+        ...selectedJobOptions,
+        ...(jobDescriptionOther.trim() ? [jobDescriptionOther.trim()] : []),
+      ].join("\n");
+
+      /*
+      LINEユーザーID取得
+    */
+      let userId: string | null = null;
+
+      try {
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          userId = profile.userId;
+        }
+      } catch (error) {
+        console.warn("LINEユーザー情報取得失敗:", error);
+      }
+
+      const saveData = {
+        userId,
+        status,
+
+        /* 入力情報 */
+        title: result.job.title,
+        companyName: form.storeName,
+        industry: form.industry,
+        jobTitle: form.jobTitle,
+
+        /*
+        現在のApp.tsxにはまだrecruitmentCountがないため
+        null相当で保存
+      */
+        recruitmentCount: null,
+
+        jobDescription: selectedDescription,
+        employmentType: form.employmentType,
+
+        location: form.location,
+
+        workType: form.workType,
+        startTime: form.startTime,
+        endTime: form.endTime,
+
+        /*
+        現在のApp.tsxにはまだ以下の項目がないためnull
+      */
+        breakTime: null,
+        holidays: null,
+
+        minDaysPerWeek: form.minDaysPerWeek,
+        minHoursPerDay: form.minHoursPerDay,
+
+        overtime: null,
+
+        shiftExample: form.shiftExample,
+
+        salaryType: form.salaryType,
+        salary: form.salary,
+
+        raise: null,
+        bonus: null,
+        trialPeriod: null,
+        contractPeriod: null,
+
+        experience: null,
+
+        requiredConditions: [],
+        welcomeConditions: [],
+        qualifications: [],
+
+        benefits: form.benefits,
+
+        socialInsurance: null,
+        transportationAllowance: null,
+        allowances: [],
+        otherBenefits: null,
+
+        workplaceAtmosphere: [],
+        ageGroup: [],
+        genderRatio: null,
+
+        appealPoints: [],
+
+        aiRequest: form.aiRequest,
+
+        /* AI分析結果 */
+        nearestStations: result.nearestStations,
+        score: result.score,
+        marketSummary: result.marketSummary,
+        improvementPoints: result.improvementPoints,
+
+        /* AI生成求人 */
+        aiTitle: result.job.title,
+        catchCopy: result.job.catchCopy,
+        aiDescription: result.job.description,
+        aiRequirements: result.job.requirements,
+        aiSalary: result.job.salary,
+        aiWorkingHours: result.job.workingHours,
+        aiLocation: result.job.location,
+        aiEmploymentType: result.job.employmentType,
+        aiBenefits: result.job.benefits,
+        aiAppealPoints: result.job.appealPoints,
+      };
+
+      console.log("求人保存データ:", saveData);
+
+      const method = savedJobId === null ? "POST" : "PATCH";
+
+      const requestData =
+        savedJobId === null
+          ? saveData
+          : {
+              ...saveData,
+              id: savedJobId,
+            };
+
+      console.log("求人保存方法:", method);
+      console.log("求人ID:", savedJobId);
+
+      const response = await fetch("/api/jobs", {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "求人の保存に失敗しました");
+      }
+
+      console.log("求人保存成功:", data.job);
+
+      if (data.job?.id) {
+        setSavedJobId(Number(data.job.id));
+      }
+
+      if (status === "0") {
+        alert("求人を下書き保存しました。");
+      } else {
+        alert("求人を公開しました。");
+      }
+    } catch (error: any) {
+      console.error("求人保存エラー:", error);
+
+      setErrorMessage(error?.message || "求人の保存に失敗しました。");
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* ========================================
-     Render
+   求人内容編集
   ======================================== */
 
+  const updateGeneratedJob = (
+    field: keyof AnalysisResult["job"],
+    value: string
+  ) => {
+    setResult((prev) => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        job: {
+          ...prev.job,
+          [field]: value,
+        },
+      };
+    });
+  };
+  /* ========================================
+     レンダリング
+  ======================================== */
   return (
     <>
-      {/* ====================================
-          Header
-      ==================================== */}
-
       <header className="header">
         <div className="header-inner">
           <div className="logo">
@@ -973,7 +1153,14 @@ function App() {
                   className={`select-button ${
                     form.employmentType === type ? "active" : ""
                   }`}
-                  onClick={() => setSingleValue("employmentType", type)}
+                  onClick={() => {
+                    setSingleValue("employmentType", type);
+                    if (type === "アルバイト・パート") {
+                      setSingleValue("workType", "シフト制");
+                    } else {
+                      setSingleValue("workType", "固定時間");
+                    }
+                  }}
                 >
                   {type}
                 </button>
@@ -1875,34 +2062,108 @@ function App() {
             <div className="result-block">
               <h3>📝 AIが作成した求人票</h3>
 
-              <div className="generated-job">
-                <h4>{result.job.title}</h4>
+              <div className="generated-edit-field">
+                <label>求人タイトル</label>
 
-                <p className="catch-copy">{result.job.catchCopy}</p>
+                <input
+                  type="text"
+                  value={result.job.title}
+                  onChange={(e) => updateGeneratedJob("title", e.target.value)}
+                />
+              </div>
 
-                <h4>仕事内容</h4>
-                <p>{result.job.description}</p>
+              <div className="generated-edit-field">
+                <label>キャッチコピー</label>
 
-                <h4>応募資格・求める人物像</h4>
-                <p>{result.job.requirements}</p>
+                <input
+                  type="text"
+                  value={result.job.catchCopy}
+                  onChange={(e) =>
+                    updateGeneratedJob("catchCopy", e.target.value)
+                  }
+                />
+              </div>
 
-                <h4>給与</h4>
-                <p>{result.job.salary}</p>
+              <div className="generated-edit-field">
+                <label>仕事内容</label>
 
-                <h4>勤務時間</h4>
-                <p>{result.job.workingHours}</p>
+                <textarea
+                  value={result.job.description}
+                  onChange={(e) =>
+                    updateGeneratedJob("description", e.target.value)
+                  }
+                  rows={10}
+                />
+              </div>
 
-                <h4>勤務地</h4>
-                <p>{result.job.location}</p>
+              <div className="generated-edit-field">
+                <label>仕事内容</label>
 
-                <h4>雇用形態</h4>
-                <p>{result.job.employmentType}</p>
+                <textarea
+                  value={result.job.description}
+                  onChange={(e) =>
+                    updateGeneratedJob("description", e.target.value)
+                  }
+                  rows={10}
+                />
+              </div>
 
-                <h4>待遇・福利厚生</h4>
-                <p>{result.job.benefits}</p>
+              <div className="generated-edit-field">
+                <label>給与</label>
 
-                <h4>この求人の魅力</h4>
-                <p>{result.job.appealPoints}</p>
+                <textarea
+                  value={result.job.salary}
+                  onChange={(e) => updateGeneratedJob("salary", e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div className="generated-edit-field">
+                <label>勤務地</label>
+
+                <textarea
+                  value={result.job.location}
+                  onChange={(e) =>
+                    updateGeneratedJob("location", e.target.value)
+                  }
+                  rows={3}
+                />
+              </div>
+
+              <div className="generated-edit-field">
+                <label>雇用形態</label>
+
+                <input
+                  type="text"
+                  value={result.job.employmentType}
+                  onChange={(e) =>
+                    updateGeneratedJob("employmentType", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="generated-edit-field">
+                <label>福利厚生</label>
+
+                <textarea
+                  value={result.job.benefits}
+                  onChange={(e) =>
+                    updateGeneratedJob("benefits", e.target.value)
+                  }
+                  rows={6}
+                />
+              </div>
+
+              <div className="generated-edit-field">
+                <label>アピールポイント</label>
+
+                <textarea
+                  value={result.job.appealPoints}
+                  onChange={(e) =>
+                    updateGeneratedJob("appealPoints", e.target.value)
+                  }
+                  rows={6}
+                />
               </div>
             </div>
 
@@ -1911,7 +2172,10 @@ function App() {
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() => setResult(null)}
+                onClick={() => {
+                  setResult(null);
+                  setSavedJobId(null);
+                }}
               >
                 作り直す
               </button>
@@ -1919,11 +2183,19 @@ function App() {
               <button
                 type="button"
                 className="save-button"
-                onClick={() => {
-                  alert("保存機能は次のステップで実装します。");
-                }}
+                onClick={() => handleSaveJob("0")}
+                disabled={saving}
               >
-                💾 この求人を保存
+                {saving ? "保存中..." : "💾 下書き保存"}
+              </button>
+
+              <button
+                type="button"
+                className="publish-button"
+                onClick={() => handleSaveJob("1")}
+                disabled={saving}
+              >
+                {saving ? "処理中..." : "🚀 この求人を公開"}
               </button>
             </div>
           </section>

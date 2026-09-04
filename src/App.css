@@ -261,7 +261,6 @@ textarea {
 /* ========================================
    Button Group
 ======================================== */
-
 .button-group {
   display: flex;
   gap: 10px;
@@ -272,7 +271,8 @@ textarea {
   flex: 1;
   min-width: 130px;
 
-  padding: 11px 16px;
+  padding: 11px 13px;
+  font-size: 14px;
 
   border: 1px solid #d1d5db;
   border-radius: 10px;
@@ -741,13 +741,16 @@ textarea {
 /* ========================================
    Generated Actions
 ======================================== */
-
 .generated-actions {
   display: flex;
-  justify-content: center;
   gap: 12px;
-
+  width: 100%;
   margin-top: 24px;
+}
+
+.generated-actions > button {
+  flex: 1;
+  min-width: 0;
 }
 
 .secondary-button,
@@ -792,6 +795,36 @@ textarea {
 .secondary-button:active,
 .save-button:active {
   transform: translateY(1px);
+}
+
+.publish-button {
+  flex: 1;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 10px;
+
+  background: #06c755;
+  color: #ffffff;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.publish-button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.publish-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.publish-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ========================================
@@ -1071,4 +1104,46 @@ textarea {
   .job-option-button {
     min-height: 46px;
   }
+}
+
+.generated-edit-field {
+  margin-bottom: 20px;
+}
+
+.generated-edit-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.generated-edit-field input,
+.generated-edit-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+
+  padding: 12px 14px;
+
+  border: 1px solid #ddd;
+  border-radius: 8px;
+
+  background: #fff;
+
+  font-size: 15px;
+  line-height: 1.7;
+  color: #333;
+
+  outline: none;
+}
+
+.generated-edit-field textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.generated-edit-field input:focus,
+.generated-edit-field textarea:focus {
+  border-color: #06c755;
+  box-shadow: 0 0 0 2px rgba(6, 199, 85, 0.1);
 }

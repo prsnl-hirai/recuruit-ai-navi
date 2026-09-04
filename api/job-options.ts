@@ -13,11 +13,17 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEYが設定されていません");
-    }
+    console.log("========================================");
+    console.log("仕事内容候補生成");
+    console.log("========================================");
+
+    console.log("受信データ:", req.body);
 
     const { industry, jobTitle } = req.body;
+
+    /* =========================
+       入力チェック
+    ========================= */
 
     if (!industry) {
       return res.status(400).json({
@@ -29,14 +35,19 @@ export default async function handler(req: any, res: any) {
     if (!jobTitle) {
       return res.status(400).json({
         success: false,
-        message: "職種を選択してください",
+        message: "職種を入力してください",
       });
     }
+
+    /* =========================
+       AIプロンプト
+    ========================= */
 
     const prompt = `
 あなたは求人作成サービス「求人AIナビ」のアシスタントです。
 
-以下の業種・職種から、その仕事で一般的に行われる仕事内容を考えてください。
+以下の業種・職種から、
+その仕事で一般的に行われる仕事内容を考えてください。
 
 【業種】
 ${industry}
@@ -45,7 +56,8 @@ ${industry}
 ${jobTitle}
 
 応募者が仕事内容をイメージしやすいように、
-実際の求人でよく使われる仕事内容を候補として8個程度作成してください。
+実際の求人でよく使われる仕事内容を
+6～8個程度作成してください。
 
 【ルール】
 
@@ -76,27 +88,29 @@ ${jobTitle}
 JSON以外の文章は絶対に出力しないでください。
 `;
 
-    console.log("仕事内容候補生成");
-    console.log({
-      industry,
-      jobTitle,
-    });
+    /* =========================
+       OpenAI API
+    ========================= */
 
     const response = await openai.responses.create({
-      model: "gpt-5.6-luna",
+      model: "gpt-5-mini",
       input: prompt,
     });
 
     const output = response.output_text;
 
-    console.log("AI response:", output);
+    console.log("仕事内容候補AI response:", output);
 
-    let parsed;
+    /* =========================
+       JSON解析
+    ========================= */
+
+    let parsed: any;
 
     try {
       parsed = JSON.parse(output);
-    } catch (error) {
-      console.error("JSON parse error:", error);
+    } catch {
+      console.log("JSON直接解析失敗。JSON部分を抽出します。");
 
       const jsonMatch = output.match(/\{[\s\S]*\}/);
 
@@ -104,26 +118,48 @@ JSON以外の文章は絶対に出力しないでください。
         throw new Error("AIから正しいJSONが返されませんでした");
       }
 
-      parsed = JSON.parse(jsonMatch[0]);
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (jsonError) {
+        console.error("JSON解析エラー:", jsonError);
+
+        throw new Error("AIの回答をJSONとして解析できませんでした");
+      }
     }
 
-    const options = Array.isArray(parsed.options)
+    /* =========================
+       候補を安全に整形
+    ========================= */
+
+    const options = Array.isArray(parsed?.options)
       ? parsed.options.filter(
-          (item: unknown): item is string =>
-            typeof item === "string" && item.trim() !== ""
+          (item: unknown) => typeof item === "string" && item.trim() !== ""
         )
       : [];
+
+    if (options.length === 0) {
+      throw new Error("仕事内容候補を生成できませんでした");
+    }
+
+    /* =========================
+       レスポンス
+    ========================= */
 
     return res.status(200).json({
       success: true,
       options,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("仕事内容候補生成エラー:", error);
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : "仕事内容候補の生成に失敗しました";
 
     return res.status(500).json({
       success: false,
-      message: error?.message || "仕事内容候補の生成に失敗しました",
+      message,
     });
   }
 }
