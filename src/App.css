@@ -136,13 +136,13 @@ select {
 }
 
 .section-title {
-  margin: 0 0 22px;
+  margin: 0 0 px;
 
   display: flex;
   align-items: center;
   gap: 8px;
 
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 800;
   color: #111827;
 }
@@ -324,18 +324,24 @@ textarea {
 }
 
 .benefit-button {
-  min-height: 44px;
-  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  min-height: 48px;
+  padding: 10px 13px;
 
   border: 1px solid #d1d5db;
-  border-radius: 9px;
+  border-radius: 10px;
 
   background: #ffffff;
-  color: #4b5563;
+  color: #374151;
 
-  cursor: pointer;
+  text-align: left;
   font-size: 13px;
   font-weight: 600;
+
+  cursor: pointer;
 
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
@@ -349,6 +355,31 @@ textarea {
   border-color: #6366f1;
   background: #eef2ff;
   color: #4f46e5;
+}
+
+.benefit-check {
+  width: 21px;
+  height: 21px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+
+  background: #ffffff;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.benefit-button.active .benefit-check {
+  border-color: #6366f1;
+  background: #6366f1;
+  color: #ffffff;
 }
 
 /* ========================================
@@ -896,5 +927,148 @@ textarea {
 
   .score-grid > div {
     padding: 11px 6px;
+  }
+}
+
+/* ========================================
+   AI Job Description Options
+======================================== */
+
+.job-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.job-option-button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  min-height: 48px;
+  padding: 10px 13px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+
+  background: #ffffff;
+  color: #374151;
+
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.job-option-button:hover {
+  border-color: #a5b4fc;
+  background: #f8f8ff;
+}
+
+.job-option-button.active {
+  border-color: #6366f1;
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.job-option-check {
+  width: 21px;
+  height: 21px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+
+  background: #ffffff;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.job-option-button.active .job-option-check {
+  border-color: #6366f1;
+  background: #6366f1;
+  color: #ffffff;
+}
+
+.job-description-other {
+  margin-top: 18px;
+}
+
+.job-description-other label {
+  display: block;
+  margin-bottom: 7px;
+
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.job-options-empty {
+  padding: 16px;
+
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+
+  background: #f9fafb;
+
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+}
+
+.job-options-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 100px;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+
+  background: #f9fafb;
+
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.small-spinner {
+  display: inline-block;
+
+  width: 16px;
+  height: 16px;
+
+  margin-right: 8px;
+
+  border: 2px solid #e5e7eb;
+  border-top-color: #6366f1;
+
+  border-radius: 50%;
+
+  animation: smallSpinner 0.7s linear infinite;
+}
+
+@keyframes smallSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 700px) {
+  .job-options-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .job-option-button {
+    min-height: 46px;
   }
 }
