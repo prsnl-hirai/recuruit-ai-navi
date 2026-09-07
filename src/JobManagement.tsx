@@ -419,7 +419,7 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
                         fontWeight: 700,
                       }}
                     >
-                      👁 公開ページ
+                      🌐 公開ページ
                     </button>
                   )}
                 </div>

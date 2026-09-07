@@ -252,12 +252,38 @@ export default async function handler(req: any, res: any) {
     // 求人一覧取得
     // ========================================
     if (req.method === "GET") {
+      const id = req.query.id ? Number(req.query.id) : null;
+
+      // 1件取得
+      if (id) {
+        const rows = await sql`
+      SELECT *
+      FROM jobs
+      WHERE id = ${id}
+        AND status <> '9'
+      LIMIT 1
+    `;
+
+        if (rows.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "求人が見つかりません",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          job: rows[0],
+        });
+      }
+
+      // 一覧取得
       const jobs = await sql`
-        SELECT *
-        FROM jobs
-        WHERE status <> '9'
-        ORDER BY created_at DESC;
-      `;
+    SELECT *
+    FROM jobs
+    WHERE status <> '9'
+    ORDER BY created_at DESC
+  `;
 
       return res.status(200).json({
         success: true,
@@ -266,8 +292,8 @@ export default async function handler(req: any, res: any) {
     }
 
     /* ========================================
-   PATCH 求人更新
-======================================== */
+    PATCH 求人更新
+    ======================================== */
 
     if (req.method === "PATCH") {
       try {
