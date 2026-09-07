@@ -495,9 +495,21 @@ function App() {
         console.log("isInClient:", liff.isInClient());
 
         if (!liff.isLoggedIn()) {
-          console.log("LINE login開始");
           liff.login();
           return;
+        }
+
+        const context = liff.getContext();
+
+        console.log("LIFF context:", context);
+        console.log("LIFF scope:", context?.scope);
+
+        try {
+          const granted = await liff.permission.getGrantedAll();
+
+          console.log("Granted permissions:", granted);
+        } catch (e) {
+          console.error("permission取得エラー:", e);
         }
 
         const profile = await liff.getProfile();
@@ -507,7 +519,7 @@ function App() {
 
         setLineUserId(profile.userId);
       } catch (error) {
-        console.error("LIFF初期化エラー:", error);
+        console.error("LINEプロフィール取得エラー:", error);
       }
     };
 
