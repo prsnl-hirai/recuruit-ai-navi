@@ -71,10 +71,31 @@ app.post("/api/generate-job", async (req, res) => {
       });
     }
 
-    if (!job.location?.trim()) {
+    if (!job.postalCode?.trim()) {
       return res.status(400).json({
         success: false,
-        message: "勤務地が入力されていません",
+        message: "郵便番号が入力されていません",
+      });
+    }
+
+    if (!job.prefecture?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "都道府県が入力されていません",
+      });
+    }
+
+    if (!job.city?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "市町村が入力されていません",
+      });
+    }
+
+    if (!job.streetAddress?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "町名・番地が入力されていません",
       });
     }
 
@@ -523,7 +544,7 @@ JSON以外の文章を絶対に出力しないでください。
 
     const safeMarketSummary = Array.isArray(parsed?.marketSummary)
       ? parsed.marketSummary.filter(
-          (item) => typeof item === "string" && item.trim() !== ""
+          (item) => typeof item === "string" && item.trim() !== "",
         )
       : [];
 
@@ -716,7 +737,7 @@ JSON以外の文章は絶対に出力しないでください。
 
     const options = Array.isArray(parsed?.options)
       ? parsed.options.filter(
-          (item) => typeof item === "string" && item.trim() !== ""
+          (item) => typeof item === "string" && item.trim() !== "",
         )
       : [];
 
@@ -1113,7 +1134,7 @@ app.all("/api/jobs", async (req, res) => {
           ${JSON.stringify(qualifications ?? [])}::jsonb,
 
         benefits =
-          ${Array.isArray(benefits) ? benefits.join("、") : benefits ?? ""},
+          ${Array.isArray(benefits) ? benefits.join("、") : (benefits ?? "")},
 
         social_insurance = ${socialInsurance},
         transportation_allowance = ${transportationAllowance},

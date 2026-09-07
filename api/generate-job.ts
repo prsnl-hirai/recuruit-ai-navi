@@ -64,10 +64,31 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    if (!job.location?.trim()) {
+    if (!job.postalCode?.trim()) {
       return res.status(400).json({
         success: false,
-        message: "勤務地が入力されていません",
+        message: "郵便番号が入力されていません",
+      });
+    }
+
+    if (!job.prefecture?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "都道府県が入力されていません",
+      });
+    }
+
+    if (!job.city?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "市町村が入力されていません",
+      });
+    }
+
+    if (!job.streetAddress?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "町名・番地が入力されていません",
       });
     }
 
@@ -512,7 +533,7 @@ export default async function handler(req: any, res: any) {
 
     const safeMarketSummary = Array.isArray(parsed?.marketSummary)
       ? parsed.marketSummary.filter(
-          (item: unknown) => typeof item === "string" && item.trim() !== ""
+          (item: unknown) => typeof item === "string" && item.trim() !== "",
         )
       : [];
 

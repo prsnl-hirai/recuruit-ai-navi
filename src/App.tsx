@@ -566,14 +566,6 @@ function App() {
 
       const data = await response.json();
 
-      if (status === "1") {
-        const publicId = data.job?.publicId ?? data.job?.public_id ?? "";
-
-        if (publicId) {
-          setPublishedPublicId(publicId);
-        }
-      }
-
       if (!response.ok || !data.success) {
         throw new Error(data.message || "仕事内容候補の取得に失敗しました");
       }
@@ -1065,14 +1057,24 @@ function App() {
 
         setSavedJobId(jobId);
 
-        if (status === "0") {
-          alert("求人を下書き保存しました。");
-        } else if (status === "1") {
-          const publicUrl = `${window.location.origin}/jobs/${data.job.public_id}`;
+        if (data.job?.id) {
+          setSavedJobId(Number(data.job.id));
 
-          console.log("公開求人URL:", publicUrl);
+          if (status === "0") {
+            alert("求人を下書き保存しました。");
+          }
 
-          alert(`求人を公開しました。\n\n${publicUrl}`);
+          if (status === "1") {
+            const publicId = data.job?.publicId ?? data.job?.public_id ?? "";
+
+            if (publicId) {
+              setPublishedPublicId(publicId);
+
+              const publicUrl = `${window.location.origin}/jobs/${publicId}`;
+
+              alert(`求人を公開しました。\n\n${publicUrl}`);
+            }
+          }
         }
       }
     } catch (error: any) {
