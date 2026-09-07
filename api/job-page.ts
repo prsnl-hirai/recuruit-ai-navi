@@ -350,7 +350,7 @@ ${JSON.stringify(structuredData)}
     <div class="apply-area">
       <a
         class="apply-button"
-        href="${baseUrl}/apply/${job.id}"
+        ref="/apply/${job.public_id}"
       >
         この求人に応募する
       </a>
