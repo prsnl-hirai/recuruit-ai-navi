@@ -248,12 +248,6 @@ ${JSON.stringify(structuredData)}
 
 <body>
 
-<header class="header">
-  <div class="header-inner">
-    求人AIナビ
-  </div>
-</header>
-
 <main class="container">
 
   <article class="job-card">

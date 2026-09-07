@@ -417,7 +417,7 @@ const initialForm: JobForm = {
   requiredConditions: [],
   welcomeConditions: [],
   experience: "未経験OK",
-  qualifications: ["資格不要"],
+  qualifications: [],
 
   benefits: [],
   socialInsurance: "勤務条件による",
@@ -483,8 +483,8 @@ function App() {
     const initLiff = async () => {
       try {
         await liff.init({
-          // liffId: "2011376548-9M89rhkF",
-          liffId: "",
+          liffId: "2011376548-9M89rhkF",
+          // liffId: "",
         });
 
         console.log("LIFF initialized");
@@ -2087,18 +2087,6 @@ function App() {
                   onChange={(e) =>
                     updateGeneratedJob("catchCopy", e.target.value)
                   }
-                />
-              </div>
-
-              <div className="generated-edit-field">
-                <label>仕事内容</label>
-
-                <textarea
-                  value={result.job.description}
-                  onChange={(e) =>
-                    updateGeneratedJob("description", e.target.value)
-                  }
-                  rows={10}
                 />
               </div>
 
