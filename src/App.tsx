@@ -489,16 +489,25 @@ function App() {
           liffId: "2011376548-9M89rhkF",
         });
 
+        console.log("LIFF initialized");
+        console.log("isLoggedIn:", liff.isLoggedIn());
+        console.log("isInClient:", liff.isInClient());
+
         if (!liff.isLoggedIn()) {
-          liff.login();
+          console.log("LINE login開始");
           return;
         }
 
-        const profile = await liff.getProfile();
+        try {
+          const profile = await liff.getProfile();
 
-        console.log("LINE userId:", profile.userId);
+          console.log("LINE profile:", profile);
+          console.log("LINE userId:", profile.userId);
 
-        setLineUserId(profile.userId);
+          setLineUserId(profile.userId);
+        } catch (profileError) {
+          console.error("LINEプロフィール取得エラー:", profileError);
+        }
       } catch (error) {
         console.error("LIFF初期化エラー:", error);
       }
