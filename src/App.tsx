@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import "./App.css";
+import PublishOptions from "./PublishOptions";
 
 type WorkType = "固定時間" | "シフト制";
 type SalaryType = "時給" | "日給" | "月給" | "年俸";
@@ -12,7 +13,11 @@ type JobForm = {
   jobTitle: string;
   employmentType: string;
   recruitmentCount: string;
-  location: string;
+  postalCode: string;
+  prefecture: string;
+  city: string;
+  streetAddress: string;
+  buildingName: string;
 
   // 仕事内容
   jobDescription: string;
@@ -393,7 +398,11 @@ const initialForm: JobForm = {
   jobTitle: "",
   employmentType: "アルバイト・パート",
   recruitmentCount: "1名",
-  location: "",
+  postalCode: "",
+  prefecture: "",
+  city: "",
+  streetAddress: "",
+  buildingName: "",
 
   jobDescription: "",
 
@@ -475,6 +484,9 @@ function App() {
   /* 求人ID */
   const [savedJobId, setSavedJobId] = useState<number | null>(null);
 
+  /* 求人publishedID */
+  const [publishedPublicId, setPublishedPublicId] = useState("");
+
   /* エラー */
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -527,7 +539,7 @@ function App() {
   }, []);
 
   /* ========================================
-     Job Options
+     仕事内容AI判定
   ======================================== */
 
   const generateJobOptions = async (industry: string, jobTitle: string) => {
@@ -554,6 +566,14 @@ function App() {
 
       const data = await response.json();
 
+      if (status === "1") {
+        const publicId = data.job?.publicId ?? data.job?.public_id ?? "";
+
+        if (publicId) {
+          setPublishedPublicId(publicId);
+        }
+      }
+
       if (!response.ok || !data.success) {
         throw new Error(data.message || "仕事内容候補の取得に失敗しました");
       }
@@ -561,7 +581,7 @@ function App() {
       const options = Array.isArray(data.options)
         ? data.options.filter(
             (item: unknown): item is string =>
-              typeof item === "string" && item.trim() !== ""
+              typeof item === "string" && item.trim() !== "",
           )
         : [];
 
@@ -575,10 +595,58 @@ function App() {
       setSelectedJobOptions([]);
 
       setErrorMessage(
-        "仕事内容候補の生成に失敗しました。もう一度お試しください。"
+        "仕事内容候補の生成に失敗しました。もう一度お試しください。",
       );
     } finally {
       setLoadingJobOptions(false);
+    }
+  };
+
+  /* ========================================
+     郵便番号から住所表示
+  ======================================== */
+  const handlePostalCodeBlur = async () => {
+    const zipcode = form.postalCode.replace(/[^0-9]/g, "");
+
+    if (zipcode.length !== 7) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zipcode}`,
+      );
+
+      if (!response.ok) {
+        throw new Error("郵便番号検索に失敗しました");
+      }
+
+      const data = await response.json();
+
+      if (!data.results || data.results.length === 0) {
+        alert("郵便番号に該当する住所が見つかりませんでした。");
+        return;
+      }
+
+      const address = data.results[0];
+
+      setForm((prev) => ({
+        ...prev,
+
+        postalCode: `${zipcode.slice(0, 3)}-${zipcode.slice(3)}`,
+
+        prefecture: address.address1 || "",
+
+        city: address.address2 || "",
+
+        streetAddress: address.address3 || "",
+
+        buildingName: prev.buildingName,
+      }));
+    } catch (error) {
+      console.error("郵便番号検索エラー:", error);
+
+      alert("住所の自動取得に失敗しました。");
     }
   };
 
@@ -640,7 +708,7 @@ function App() {
       | "workplaceAtmosphere"
       | "ageGroup"
       | "appealPoints",
-    value: string
+    value: string,
   ) => {
     setForm((prev) => {
       const current = prev[field];
@@ -703,8 +771,20 @@ function App() {
         return;
       }
 
-      if (!form.location.trim()) {
-        setErrorMessage("勤務地を入力してください。");
+      if (!form.postalCode.trim()) {
+        setErrorMessage("郵便番号を入力してください。");
+        return;
+      }
+      if (!form.prefecture.trim()) {
+        setErrorMessage("都道府県を入力してください。");
+        return;
+      }
+      if (!form.city.trim()) {
+        setErrorMessage("市町村を入力してください。");
+        return;
+      }
+      if (!form.streetAddress.trim()) {
+        setErrorMessage("町名・番地を入力してください。");
         return;
       }
 
@@ -724,7 +804,7 @@ function App() {
 
       if (!selectedDescription.trim()) {
         setErrorMessage(
-          "仕事内容を1つ以上選択するか、その他の仕事内容を入力してください。"
+          "仕事内容を1つ以上選択するか、その他の仕事内容を入力してください。",
         );
         return;
       }
@@ -856,7 +936,7 @@ function App() {
 
       if (!userId) {
         throw new Error(
-          "LINEユーザー情報を取得できませんでした。LINEからもう一度開いてください。"
+          "LINEユーザー情報を取得できませんでした。LINEからもう一度開いてください。",
         );
       }
 
@@ -879,7 +959,10 @@ function App() {
         jobDescription: selectedDescription,
         employmentType: form.employmentType,
 
-        location: form.location,
+        postalCode: form.postalCode,
+        prefecture: form.prefecture,
+        city: form.city,
+        streetAddress: form.streetAddress,
 
         workType: form.workType,
         startTime: form.startTime,
@@ -1007,7 +1090,7 @@ function App() {
 
   const updateGeneratedJob = (
     field: keyof AnalysisResult["job"],
-    value: string
+    value: string,
   ) => {
     setResult((prev) => {
       if (!prev) return prev;
@@ -1308,19 +1391,86 @@ function App() {
 
           {/* 勤務地 */}
           <div className="form-group">
-            <label>
-              勤務地
-              <span className="required">必須</span>
-            </label>
+            <label>郵便番号</label>
 
             <input
               type="text"
-              value={form.location}
-              onChange={(e) => setSingleValue("location", e.target.value)}
-              placeholder="例：愛知県名古屋市中区栄"
+              inputMode="numeric"
+              maxLength={8}
+              placeholder="例：460-0003"
+              value={form.postalCode}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  postalCode: e.target.value,
+                }));
+              }}
+              onBlur={handlePostalCodeBlur}
             />
+          </div>
 
-            <p className="help-text">最寄り駅もAIが分析します。</p>
+          <div className="form-group">
+            <label>都道府県</label>
+
+            <input
+              type="text"
+              placeholder="例：愛知県"
+              value={form.prefecture}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  prefecture: e.target.value,
+                }));
+              }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>市区町村</label>
+
+            <input
+              type="text"
+              placeholder="例：名古屋市中区"
+              value={form.city}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  city: e.target.value,
+                }));
+              }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>町名・番地</label>
+
+            <input
+              type="text"
+              placeholder="例：錦1丁目10-20"
+              value={form.streetAddress}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  streetAddress: e.target.value,
+                }));
+              }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>ビル名・建物名</label>
+
+            <input
+              type="text"
+              placeholder="例：○○ビル3F"
+              value={form.buildingName}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  buildingName: e.target.value,
+                }));
+              }}
+            />
           </div>
 
           {/* 勤務形態 */}
@@ -1513,10 +1663,10 @@ function App() {
                   form.salaryType === "時給"
                     ? "1500"
                     : form.salaryType === "日給"
-                    ? "12000"
-                    : form.salaryType === "月給"
-                    ? "250000"
-                    : "4000000"
+                      ? "12000"
+                      : form.salaryType === "月給"
+                        ? "250000"
+                        : "4000000"
                 }
               />
             </div>
@@ -2220,6 +2370,13 @@ function App() {
                 {saving ? "処理中..." : "🚀 この求人を公開"}
               </button>
             </div>
+            {publishedPublicId && result && (
+              <PublishOptions
+                publicId={publishedPublicId}
+                companyName={form.storeName}
+                job={result.job}
+              />
+            )}
           </section>
         )}
       </main>

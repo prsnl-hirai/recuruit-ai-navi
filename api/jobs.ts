@@ -20,6 +20,11 @@ export default async function handler(req: any, res: any) {
         jobDescription,
         employmentType,
 
+        postalCode,
+        prefecture,
+        city,
+        streetAddress,
+        buildingName,
         location,
 
         workType,
@@ -100,8 +105,13 @@ export default async function handler(req: any, res: any) {
           job_title,
           recruitment_count,
           job_description,
-          employment_type,
-
+          employment_type, 
+          
+          postal_code,
+          prefecture,
+          city,
+          street_address,
+          building_name,
           location,
 
           work_type,
@@ -169,6 +179,11 @@ export default async function handler(req: any, res: any) {
           ${jobDescription || null},
           ${employmentType || null},
 
+          ${postalCode || null},
+          ${prefecture || null},
+          ${city || null},
+          ${streetAddress || null},
+          ${buildingName || null},
           ${location || null},
 
           ${workType || null},
@@ -268,6 +283,12 @@ export default async function handler(req: any, res: any) {
           recruitmentCount,
           jobDescription,
           employmentType,
+
+          postalCode,
+          prefecture,
+          city,
+          streetAddress,
+          buildingName,
           location,
 
           workType,
@@ -351,6 +372,11 @@ export default async function handler(req: any, res: any) {
           job_description = ${jobDescription},
           employment_type = ${employmentType},
   
+          postal_code = ${postalCode || null},
+          prefecture = ${prefecture || null},
+          city = ${city || null},
+          street_address = ${streetAddress || null},
+          building_name = ${buildingName || null},
           location = ${location},
   
           work_type = ${workType},
@@ -382,7 +408,7 @@ export default async function handler(req: any, res: any) {
             ${JSON.stringify(qualifications ?? [])}::jsonb,
   
           benefits =
-            ${Array.isArray(benefits) ? benefits.join("、") : benefits ?? ""},
+            ${Array.isArray(benefits) ? benefits.join("、") : (benefits ?? "")},
   
           social_insurance = ${socialInsurance},
           transportation_allowance = ${transportationAllowance},

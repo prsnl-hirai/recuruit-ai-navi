@@ -2,7 +2,10 @@ import { neon } from "@neondatabase/serverless";
 
 const sql = neon(process.env.DATABASE_URL!);
 
-function escapeHtml(value: unknown) {
+/**
+ * HTMLエスケープ
+ */
+function escapeHtml(value: unknown): string {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -11,93 +14,222 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, "&#039;");
 }
 
-function nl2br(value: unknown) {
-  return escapeHtml(value).replace(/\n/g, "<br>");
+/**
+ * 改行を <br> に変換
+ */
+function nl2br(value: unknown): string {
+  return escapeHtml(value).replace(/\r?\n/g, "<br>");
+}
+
+/**
+ * JSON-LDを安全にHTMLへ埋め込む
+ */
+function safeJsonLd(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+}
+
+/**
+ * 雇用形態をGoogle JobPosting用に変換
+ */
+function getEmploymentType(employmentType: string | null): string | undefined {
+  if (!employmentType) {
+    return undefined;
+  }
+
+  if (employmentType.includes("正社員")) {
+    return "FULL_TIME";
+  }
+
+  if (
+    employmentType.includes("アルバイト") ||
+    employmentType.includes("パート")
+  ) {
+    return "PART_TIME";
+  }
+
+  if (employmentType.includes("契約")) {
+    return "CONTRACTOR";
+  }
+
+  if (employmentType.includes("派遣")) {
+    return "TEMPORARY";
+  }
+
+  return undefined;
 }
 
 export default async function handler(req: any, res: any) {
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET");
+
+    return res.status(405).send("Method Not Allowed");
+  }
+
   try {
-    if (req.method !== "GET") {
-      return res.status(405).send("Method Not Allowed");
+    const publicId = String(req.query.id ?? "").trim();
+
+    if (!publicId) {
+      return res.status(400).send("求人IDが指定されていません。");
     }
 
-    const id = req.query.id;
-
-    if (!id) {
-      return res.status(400).send("求人IDがありません");
-    }
-
+    /**
+     * 公開求人を取得
+     */
     const rows = await sql`
-    SELECT *
-    FROM jobs
-    WHERE public_id = ${id}
-      AND status = '1'
-    LIMIT 1
-  `;
+      SELECT *
+      FROM jobs
+      WHERE public_id = ${publicId}
+        AND status = '1'
+      LIMIT 1
+    `;
 
     if (rows.length === 0) {
-      return res.status(404).send("求人が見つかりません");
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <meta
+              name="viewport"
+              content="width=device-width, initial-scale=1.0"
+            >
+            <title>求人が見つかりません｜求人AIナビ</title>
+          </head>
+
+          <body
+            style="
+              font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                'Segoe UI',
+                sans-serif;
+              padding: 40px 20px;
+              text-align: center;
+            "
+          >
+            <h1>求人が見つかりません</h1>
+
+            <p>
+              この求人は募集を終了したか、
+              非公開になっている可能性があります。
+            </p>
+          </body>
+        </html>
+      `);
     }
 
-    const job = rows[0];
+    const job: any = rows[0];
 
-    const baseUrl =
-      process.env.PUBLIC_BASE_URL || "https://recuruit-ai-navi.vercel.app";
+    const baseUrl = (
+      process.env.PUBLIC_BASE_URL || "https://recuruit-ai-navi.vercel.app"
+    ).replace(/\/$/, "");
 
-    const jobUrl = `${baseUrl}/jobs/${job.id}`;
+    const publicUrl = `${baseUrl}/jobs/${job.public_id}`;
 
-    /*
-      Google JobPosting用
-      Indeedもこのページ内容を確認するため、
-      HTML本文と内容を合わせます。
-    */
-    const structuredData = {
+    const applyUrl = `${baseUrl}/apply/${job.public_id}`;
+
+    /**
+     * 表示内容
+     */
+    const jobTitle = job.ai_title || job.title || job.job_title || "求人情報";
+
+    const description = job.ai_description || job.job_description || "";
+
+    const requirements = job.ai_requirements || "";
+
+    const salary = job.ai_salary || job.salary || "";
+
+    const workingHours =
+      job.ai_working_hours ||
+      [job.start_time, job.end_time].filter(Boolean).join(" ～ ");
+
+    const location = job.ai_location || job.location || "";
+
+    const employmentType = job.ai_employment_type || job.employment_type || "";
+
+    const benefits = job.ai_benefits || job.benefits || "";
+
+    const appealPoints = job.ai_appeal_points || "";
+
+    const catchCopy = job.catch_copy || "";
+
+    const companyName = job.company_name || "";
+
+    const datePosted = job.created_at
+      ? new Date(job.created_at).toISOString()
+      : new Date().toISOString();
+
+    const structuredStreetAddress = [job.street_address, job.building_name]
+      .filter(Boolean)
+      .join(" ");
+
+    /**
+     * Google 求人検索
+     * JobPosting 構造化データ
+     */
+    const jsonLd: Record<string, unknown> = {
       "@context": "https://schema.org/",
       "@type": "JobPosting",
 
-      title: job.ai_title || job.title || job.job_title,
+      title: jobTitle,
 
-      description: `
-        <h2>仕事内容</h2>
-        <p>${escapeHtml(job.ai_description || job.job_description)}</p>
+      description,
 
-        <h2>応募資格</h2>
-        <p>${escapeHtml(job.ai_requirements || "")}</p>
+      datePosted,
 
-        <h2>給与</h2>
-        <p>${escapeHtml(job.ai_salary || job.salary || "")}</p>
-
-        <h2>勤務時間</h2>
-        <p>${escapeHtml(job.ai_working_hours || "")}</p>
-
-        <h2>福利厚生</h2>
-        <p>${escapeHtml(job.ai_benefits || job.benefits || "")}</p>
-      `,
-
-      datePosted: job.created_at,
+      employmentType: getEmploymentType(employmentType),
 
       hiringOrganization: {
         "@type": "Organization",
-        name: job.company_name || "",
+        name: companyName,
       },
 
       jobLocation: {
         "@type": "Place",
+
         address: {
           "@type": "PostalAddress",
-          streetAddress: job.location || "",
+
+          postalCode: job.postal_code || undefined,
+
+          addressRegion: job.prefecture || undefined,
+
+          addressLocality: job.city || undefined,
+
+          streetAddress: structuredStreetAddress || undefined,
+
           addressCountry: "JP",
         },
       },
 
-      employmentType: job.ai_employment_type || job.employment_type || "",
-      url: jobUrl,
+      url: publicUrl,
+
+      directApply: true,
     };
 
+    /**
+     * undefinedを含む項目を
+     * JSON-LDから除外
+     */
+    Object.keys(jsonLd).forEach((key) => {
+      if (jsonLd[key] === undefined || jsonLd[key] === "") {
+        delete jsonLd[key];
+      }
+    });
+
+    /**
+     * HTML
+     */
     const html = `
 <!DOCTYPE html>
+
 <html lang="ja">
+
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -105,121 +237,127 @@ export default async function handler(req: any, res: any) {
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>${escapeHtml(
-    job.ai_title || job.title || job.job_title
-  )}｜${escapeHtml(job.company_name)}</title>
+  <title>
+    ${escapeHtml(jobTitle)}
+    ｜${escapeHtml(companyName)}
+  </title>
 
   <meta
     name="description"
-    content="${escapeHtml(
-      job.catch_copy || job.ai_description || job.job_description || ""
-    )}"
+    content="${escapeHtml(description.replace(/\r?\n/g, " ").slice(0, 150))}"
   >
 
   <link
     rel="canonical"
-    href="${jobUrl}"
+    href="${escapeHtml(publicUrl)}"
   >
 
   <script type="application/ld+json">
-${JSON.stringify(structuredData)}
+    ${safeJsonLd(jsonLd)}
   </script>
 
   <style>
+
     * {
       box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      background: #f6f7f8;
+      background: #f6f7f9;
       color: #222;
       font-family:
         -apple-system,
         BlinkMacSystemFont,
-        "Helvetica Neue",
-        "Yu Gothic",
-        "Hiragino Kaku Gothic ProN",
-        Arial,
+        "Segoe UI",
+        "Noto Sans JP",
         sans-serif;
-      line-height: 1.8;
+      line-height: 1.75;
     }
 
     .header {
-      background: #06c755;
-      color: white;
-      padding: 18px 20px;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
     }
 
     .header-inner {
-      max-width: 900px;
-      margin: auto;
+      width: min(900px, 100%);
+      margin: 0 auto;
+      padding: 18px 20px;
       font-size: 18px;
       font-weight: 700;
     }
 
     .container {
-      max-width: 900px;
-      margin: 30px auto;
-      padding: 0 16px;
+      width: min(900px, 100%);
+      margin: 28px auto;
+      padding: 0 16px 60px;
     }
 
     .job-card {
-      background: white;
-      border-radius: 14px;
-      padding: 32px;
-      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      overflow: hidden;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      box-shadow:
+        0 3px 14px
+        rgba(0, 0, 0, 0.04);
     }
 
-    h1 {
-      margin-top: 0;
-      margin-bottom: 12px;
-      font-size: 28px;
-      line-height: 1.4;
+    .job-main {
+      padding: 32px;
     }
 
     .company {
-      font-size: 17px;
-      font-weight: 700;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
+      color: #555;
+      font-size: 15px;
     }
 
-    .location {
-      color: #666;
-      margin-bottom: 25px;
+    h1 {
+      margin: 0 0 12px;
+      color: #111827;
+      font-size: 30px;
+      line-height: 1.4;
     }
 
     .catch-copy {
-      background: #f0fff5;
-      border-left: 4px solid #06c755;
-      padding: 15px 18px;
-      margin: 25px 0;
+      margin: 0 0 24px;
+      color: #2563eb;
+      font-size: 17px;
       font-weight: 700;
     }
 
-    .section {
-      padding: 24px 0;
-      border-top: 1px solid #eee;
+    .summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 20px 0 4px;
     }
 
-    .section h2 {
-      margin: 0 0 12px;
-      font-size: 19px;
+    .tag {
+      padding: 6px 11px;
+      background: #f3f4f6;
+      border-radius: 999px;
+      color: #374151;
+      font-size: 13px;
+      font-weight: 600;
     }
 
     .apply-area {
-      margin-top: 30px;
-      padding-top: 25px;
-      border-top: 1px solid #eee;
+      padding: 22px 32px;
+      background: #f8fafc;
+      border-top: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e7eb;
     }
 
     .apply-button {
       display: block;
       width: 100%;
-      padding: 16px;
+      padding: 15px 20px;
       border-radius: 10px;
-      background: #06c755;
-      color: #fff;
+      background: #2563eb;
+      color: #ffffff;
       font-size: 17px;
       font-weight: 700;
       text-align: center;
@@ -227,151 +365,338 @@ ${JSON.stringify(structuredData)}
     }
 
     .apply-button:hover {
-      opacity: .9;
+      opacity: 0.9;
     }
 
-    @media (max-width: 600px) {
+    .sections {
+      padding: 8px 32px 32px;
+    }
+
+    .section {
+      padding: 25px 0;
+      border-bottom: 1px solid #eeeeee;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      color: #111827;
+      font-size: 19px;
+    }
+
+    .section-content {
+      color: #374151;
+      font-size: 15px;
+    }
+
+    .footer {
+      padding: 30px 16px;
+      color: #777;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (
+      max-width: 600px
+    ) {
+
       .container {
-        margin: 15px auto;
+        margin-top: 14px;
+        padding:
+          0 10px
+          40px;
       }
 
-      .job-card {
+      .job-main {
         padding: 22px 18px;
       }
 
       h1 {
-        font-size: 23px;
+        font-size: 24px;
       }
+
+      .apply-area {
+        padding: 18px;
+      }
+
+      .sections {
+        padding:
+          4px 18px
+          24px;
+      }
+
     }
+
   </style>
+
 </head>
 
 <body>
 
-<main class="container">
-
-  <article class="job-card">
-
-    <h1>
-      ${escapeHtml(job.ai_title || job.title || job.job_title)}
-    </h1>
-
-    <div class="company">
-      ${escapeHtml(job.company_name)}
+  <header class="header">
+    <div class="header-inner">
+      求人AIナビ
     </div>
+  </header>
 
-    <div class="location">
-      📍 ${escapeHtml(job.ai_location || job.location)}
-    </div>
+  <main class="container">
 
-    ${
-      job.catch_copy
-        ? `
-          <div class="catch-copy">
-            ${nl2br(job.catch_copy)}
-          </div>
-        `
-        : ""
-    }
+    <article class="job-card">
 
-    <section class="section">
-      <h2>仕事内容</h2>
+      <div class="job-main">
 
-      <div>
-        ${nl2br(job.ai_description || job.job_description)}
+        ${
+          companyName
+            ? `
+              <div class="company">
+                ${escapeHtml(companyName)}
+              </div>
+            `
+            : ""
+        }
+
+        <h1>
+          ${escapeHtml(jobTitle)}
+        </h1>
+
+        ${
+          catchCopy
+            ? `
+              <p class="catch-copy">
+                ${escapeHtml(catchCopy)}
+              </p>
+            `
+            : ""
+        }
+
+        <div class="summary">
+
+          ${
+            employmentType
+              ? `
+                <span class="tag">
+                  ${escapeHtml(employmentType)}
+                </span>
+              `
+              : ""
+          }
+
+          ${
+            salary
+              ? `
+                <span class="tag">
+                  ${escapeHtml(salary)}
+                </span>
+              `
+              : ""
+          }
+
+          ${
+            location
+              ? `
+                <span class="tag">
+                  📍 ${escapeHtml(location)}
+                </span>
+              `
+              : ""
+          }
+
+        </div>
+
       </div>
-    </section>
 
-    <section class="section">
-      <h2>応募資格</h2>
+      <div class="apply-area">
 
-      <div>
-        ${nl2br(job.ai_requirements)}
+        <a
+          class="apply-button"
+          href="${escapeHtml(applyUrl)}"
+        >
+          この求人に応募する
+        </a>
+
       </div>
-    </section>
 
-    <section class="section">
-      <h2>給与</h2>
+      <div class="sections">
 
-      <div>
-        ${nl2br(job.ai_salary || job.salary)}
+        ${
+          description
+            ? `
+              <section class="section">
+                <h2>仕事内容</h2>
+
+                <div class="section-content">
+                  ${nl2br(description)}
+                </div>
+              </section>
+            `
+            : ""
+        }
+
+        ${
+          requirements
+            ? `
+              <section class="section">
+                <h2>
+                  応募資格・求める人物像
+                </h2>
+
+                <div class="section-content">
+                  ${nl2br(requirements)}
+                </div>
+              </section>
+            `
+            : ""
+        }
+
+        ${
+          salary
+            ? `
+              <section class="section">
+                <h2>給与</h2>
+
+                <div class="section-content">
+                  ${nl2br(salary)}
+                </div>
+              </section>
+            `
+            : ""
+        }
+
+        ${
+          workingHours
+            ? `
+              <section class="section">
+                <h2>勤務時間</h2>
+
+                <div class="section-content">
+                  ${nl2br(workingHours)}
+                </div>
+              </section>
+            `
+            : ""
+        }
+
+        ${
+          location
+            ? `
+              <section class="section">
+                <h2>勤務地</h2>
+
+                <div class="section-content">
+                  ${nl2br(location)}
+                </div>
+              </section>
+            `
+            : ""
+        }
+
+        ${
+          employmentType
+            ? `
+              <section class="section">
+                <h2>雇用形態</h2>
+
+                <div class="section-content">
+                  ${nl2br(employmentType)}
+                </div>
+              </section>
+            `
+            : ""
+        }
+
+        ${
+          benefits
+            ? `
+              <section class="section">
+                <h2>
+                  待遇・福利厚生
+                </h2>
+
+                <div class="section-content">
+                  ${nl2br(benefits)}
+                </div>
+              </section>
+            `
+            : ""
+        }
+
+        ${
+          appealPoints
+            ? `
+              <section class="section">
+                <h2>
+                  この求人の魅力
+                </h2>
+
+                <div class="section-content">
+                  ${nl2br(appealPoints)}
+                </div>
+              </section>
+            `
+            : ""
+        }
+
       </div>
-    </section>
 
-    <section class="section">
-      <h2>勤務時間</h2>
+    </article>
 
-      <div>
-        ${nl2br(
-          job.ai_working_hours ||
-            `${job.start_time || ""} ～ ${job.end_time || ""}`
-        )}
-      </div>
-    </section>
+  </main>
 
-    <section class="section">
-      <h2>勤務地</h2>
-
-      <div>
-        ${nl2br(job.ai_location || job.location)}
-      </div>
-    </section>
-
-    <section class="section">
-      <h2>雇用形態</h2>
-
-      <div>
-        ${nl2br(job.ai_employment_type || job.employment_type)}
-      </div>
-    </section>
-
-    <section class="section">
-      <h2>福利厚生</h2>
-
-      <div>
-        ${nl2br(job.ai_benefits || job.benefits)}
-      </div>
-    </section>
-
-    ${
-      job.ai_appeal_points
-        ? `
-        <section class="section">
-          <h2>アピールポイント</h2>
-
-          <div>
-            ${nl2br(job.ai_appeal_points)}
-          </div>
-        </section>
-        `
-        : ""
-    }
-
-    <div class="apply-area">
-      <a
-        class="apply-button"
-        ref="/apply/${job.public_id}"
-      >
-        この求人に応募する
-      </a>
-    </div>
-
-  </article>
-
-</main>
+  <footer class="footer">
+    求人AIナビ
+    <br>
+    AIで、求人作成をもっと簡単に。
+  </footer>
 
 </body>
+
 </html>
-    `;
+`;
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
 
     res.setHeader("Cache-Control", "public, max-age=60");
 
     return res.status(200).send(html);
-  } catch (error: any) {
-    console.error("求人ページ生成エラー:", error);
+  } catch (error) {
+    console.error("Job page error:", error);
 
-    return res.status(500).send("求人ページの表示に失敗しました");
+    return res.status(500).send(`
+      <!DOCTYPE html>
+      <html lang="ja">
+        <head>
+          <meta charset="UTF-8">
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+          >
+          <title>エラー｜求人AIナビ</title>
+        </head>
+
+        <body
+          style="
+            font-family:
+              -apple-system,
+              BlinkMacSystemFont,
+              'Segoe UI',
+              sans-serif;
+            padding: 40px 20px;
+            text-align: center;
+          "
+        >
+          <h1>
+            求人情報を表示できませんでした
+          </h1>
+
+          <p>
+            時間をおいて、
+            もう一度お試しください。
+          </p>
+        </body>
+      </html>
+    `);
   }
 }
