@@ -950,13 +950,19 @@ function App() {
       console.log("求人保存成功:", data.job);
 
       if (data.job?.id) {
-        setSavedJobId(Number(data.job.id));
-      }
+        const jobId = Number(data.job.id);
 
-      if (status === "0") {
-        alert("求人を下書き保存しました。");
-      } else {
-        alert("求人を公開しました。");
+        setSavedJobId(jobId);
+
+        if (status === "0") {
+          alert("求人を下書き保存しました。");
+        } else if (status === "1") {
+          const publicUrl = `${window.location.origin}/jobs/${jobId}`;
+
+          console.log("公開求人URL:", publicUrl);
+
+          alert(`求人を公開しました。\n\n${publicUrl}`);
+        }
       }
     } catch (error: any) {
       console.error("求人保存エラー:", error);

@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/jobs/:id",
+      "destination": "/api/job-page?id=:id"
+    },
+    {
+      "source": "/indeed/jobs.xml",
+      "destination": "/api/indeed-feed"
+    }
+  ]
+}

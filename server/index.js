@@ -734,7 +734,7 @@ JSON以外の文章は絶対に出力しないでください。
   }
 });
 
-app.post("/api/jobs", async (req, res) => {
+app.all("/api/jobs", async (req, res) => {
   console.log("★★ server/index.js /api/jobs ★★");
   console.log("body:", req.body);
   try {
