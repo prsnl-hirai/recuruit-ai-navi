@@ -487,6 +487,7 @@ function App() {
       try {
         await liff.init({
           liffId: "2011376548-9M89rhkF",
+          withLoginOnExternalBrowser: true,
         });
 
         console.log("LIFF initialized");
@@ -495,19 +496,16 @@ function App() {
 
         if (!liff.isLoggedIn()) {
           console.log("LINE login開始");
+          liff.login();
           return;
         }
 
-        try {
-          const profile = await liff.getProfile();
+        const profile = await liff.getProfile();
 
-          console.log("LINE profile:", profile);
-          console.log("LINE userId:", profile.userId);
+        console.log("LINE profile:", profile);
+        console.log("LINE userId:", profile.userId);
 
-          setLineUserId(profile.userId);
-        } catch (profileError) {
-          console.error("LINEプロフィール取得エラー:", profileError);
-        }
+        setLineUserId(profile.userId);
       } catch (error) {
         console.error("LIFF初期化エラー:", error);
       }
