@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import "./App.css";
 import PublishOptions from "./PublishOptions";
+import JobManagement from "./JobManagement";
 
 type WorkType = "固定時間" | "シフト制";
 type SalaryType = "時給" | "日給" | "月給" | "年俸";
@@ -487,8 +488,32 @@ function App() {
   /* 求人publishedID */
   const [publishedPublicId, setPublishedPublicId] = useState("");
 
+  type PageType = "create" | "jobs" | "edit";
+
+  /* 現在のページ */
+  const [currentPage, setCurrentPage] = useState<PageType>("create");
+
+  /* 編集求人ID */
+  const [editingJobId, setEditingJobId] = useState<number | null>(null);
+
   /* エラー */
   const [errorMessage, setErrorMessage] = useState("");
+
+  /* ========================================
+     URLチェック
+  ======================================== */
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    const page = params.get("page");
+
+    if (page === "jobs") {
+      setCurrentPage("jobs");
+    } else {
+      setCurrentPage("create");
+    }
+  }, []);
 
   /* ========================================
      LIFF
@@ -498,7 +523,7 @@ function App() {
     const initLiff = async () => {
       try {
         await liff.init({
-          liffId: "2011376548-9M89rhkF",
+          liffId: "",
           withLoginOnExternalBrowser: true,
         });
 
@@ -1106,6 +1131,22 @@ function App() {
       };
     });
   };
+
+  if (currentPage === "jobs") {
+    return (
+      <JobManagement
+        onCreateJob={() => {
+          setCurrentPage("create");
+        }}
+        onEditJob={(jobId) => {
+          setEditingJobId(jobId);
+
+          setCurrentPage("edit");
+        }}
+      />
+    );
+  }
+
   /* ========================================
      レンダリング
   ======================================== */
