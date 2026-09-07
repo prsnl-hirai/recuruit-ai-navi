@@ -257,10 +257,6 @@ export default async function handler(req: any, res: any) {
 
 <body>
 
-  <div class="header">
-    求人AIナビ
-  </div>
-
   <main class="container">
 
     <section class="job-info">

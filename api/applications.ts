@@ -41,6 +41,7 @@ export default async function handler(req: any, res: any) {
       SELECT
         id,
         public_id,
+        user_id,
         company_name,
         ai_title,
         title
@@ -87,6 +88,23 @@ export default async function handler(req: any, res: any) {
         created_at;
     `;
 
+    const jobTitle = job.ai_title || job.title || job.job_title || "求人";
+
+    const notificationMessage = [
+      "📩 新しい応募がありました",
+      "",
+      `求人：${jobTitle}`,
+      `応募者：${name.trim()}`,
+      `メール：${email.trim()}`,
+      phone?.trim() ? `電話番号：${phone.trim()}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    if (job.user_id) {
+      await sendLineNotification(job.user_id, notificationMessage);
+    }
+
     return res.status(201).json({
       success: true,
       message: "応募を受け付けました。",
@@ -99,5 +117,36 @@ export default async function handler(req: any, res: any) {
       success: false,
       message: "応募の受付中にエラーが発生しました。",
     });
+  }
+}
+
+async function sendLineNotification(userId: string, message: string) {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+
+  if (!token) {
+    console.error("LINE_CHANNEL_ACCESS_TOKEN is not set");
+    return;
+  }
+
+  const response = await fetch("https://api.line.me/v2/bot/message/push", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      to: userId,
+      messages: [
+        {
+          type: "text",
+          text: message,
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error("LINE push error:", response.status, text);
   }
 }
