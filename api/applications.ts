@@ -61,33 +61,26 @@ export default async function handler(req: any, res: any) {
     const job = jobs[0];
 
     const applications = await sql`
-      INSERT INTO applications (
-        job_id,
-        name,
-        email,
-        phone,
-        message,
-        status
-      )
-      VALUES (
-        ${job.id},
-        ${name.trim()},
-        ${email.trim()},
-        ${phone?.trim() || null},
-        ${message?.trim() || null},
-        '0'
-      )
-      RETURNING
-        id,
-        job_id,
-        name,
-        email,
-        phone,
-        message,
-        status,
-        created_at;
-    `;
-
+    INSERT INTO applications (
+      job_id,
+      name,
+      email,
+      phone,
+      message,
+      status,
+      source
+    )
+    VALUES (
+      ${job.id},
+      ${name},
+      ${email},
+      ${phone || null},
+      ${message || null},
+      '0',
+      'web'
+    )
+    RETURNING *
+  `;
     const jobTitle = job.ai_title || job.title || job.job_title || "求人";
 
     const notificationMessage = [
