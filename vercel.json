@@ -1,8 +1,9 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
       "source": "/jobs/:id",
-      "destination": "/api/job-page?id=:id"
+      "destination": "/api/job-page"
     },
     {
       "source": "/indeed/jobs.xml",
