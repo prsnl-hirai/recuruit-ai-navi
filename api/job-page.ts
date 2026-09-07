@@ -61,6 +61,56 @@ function getEmploymentType(employmentType: string | null): string | undefined {
   return undefined;
 }
 
+/**
+ * 給与単位をGoogle JobPosting用に変換
+ */
+function getSalaryUnit(salaryType: string | null): string | undefined {
+  if (!salaryType) {
+    return undefined;
+  }
+
+  if (salaryType === "時給") {
+    return "HOUR";
+  }
+
+  if (salaryType === "日給") {
+    return "DAY";
+  }
+
+  if (salaryType === "月給") {
+    return "MONTH";
+  }
+
+  if (salaryType === "年俸") {
+    return "YEAR";
+  }
+
+  return undefined;
+}
+
+/**
+ * 給与を数値へ変換
+ */
+function getSalaryValue(salary: unknown): number | undefined {
+  if (salary === null || salary === undefined || salary === "") {
+    return undefined;
+  }
+
+  const value = String(salary).replace(/[^0-9.]/g, "");
+
+  if (!value) {
+    return undefined;
+  }
+
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return undefined;
+  }
+
+  return numberValue;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -146,7 +196,22 @@ export default async function handler(req: any, res: any) {
       job.ai_working_hours ||
       [job.start_time, job.end_time].filter(Boolean).join(" ～ ");
 
-    const location = job.ai_location || job.location || "";
+    /**
+     * 分割住所から勤務地を作成
+     *
+     * 分割住所がない古い求人は
+     * ai_location / location を使用
+     */
+    const fullLocation = [
+      job.prefecture,
+      job.city,
+      job.street_address,
+      job.building_name,
+    ]
+      .filter(Boolean)
+      .join("");
+
+    const location = fullLocation || job.ai_location || job.location || "";
 
     const employmentType = job.ai_employment_type || job.employment_type || "";
 
@@ -167,11 +232,20 @@ export default async function handler(req: any, res: any) {
       .join(" ");
 
     /**
+     * Google求人検索用
+     * 給与情報
+     */
+    const salaryValue = getSalaryValue(job.salary);
+
+    const salaryUnit = getSalaryUnit(job.salary_type);
+
+    /**
      * Google 求人検索
      * JobPosting 構造化データ
      */
     const jsonLd: Record<string, unknown> = {
       "@context": "https://schema.org/",
+
       "@type": "JobPosting",
 
       title: jobTitle,
@@ -209,6 +283,26 @@ export default async function handler(req: any, res: any) {
 
       directApply: true,
     };
+
+    /**
+     * 給与が登録されている場合のみ
+     * Google JobPostingへ追加
+     */
+    if (salaryValue !== undefined && salaryUnit) {
+      jsonLd.baseSalary = {
+        "@type": "MonetaryAmount",
+
+        currency: "JPY",
+
+        value: {
+          "@type": "QuantitativeValue",
+
+          value: salaryValue,
+
+          unitText: salaryUnit,
+        },
+      };
+    }
 
     /**
      * undefinedを含む項目を
@@ -586,6 +680,11 @@ export default async function handler(req: any, res: any) {
                 <h2>勤務地</h2>
 
                 <div class="section-content">
+                  ${
+                    job.postal_code
+                      ? `〒${escapeHtml(job.postal_code)}<br>`
+                      : ""
+                  }
                   ${nl2br(location)}
                 </div>
               </section>
