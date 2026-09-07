@@ -17,9 +17,9 @@ export default async function handler(req: any, res: any) {
       return res.status(405).send("Method Not Allowed");
     }
 
-    const publicId = String(req.query.id ?? "");
+    const public_id = String(req.query.id ?? "");
 
-    if (!publicId) {
+    if (!public_id) {
       return res.status(400).send("求人IDがありません。");
     }
 
@@ -34,7 +34,7 @@ export default async function handler(req: any, res: any) {
         location,
         ai_location
       FROM jobs
-      WHERE public_id = ${publicId}
+      WHERE public_id = ${public_id}
         AND status = '1'
       LIMIT 1;
     `;
@@ -377,7 +377,7 @@ export default async function handler(req: any, res: any) {
 
         <a
           class="back-link"
-          href="/jobs/${escapeHtml(publicId)}"
+          href="/jobs/${escapeHtml(public_id)}"
         >
           ← 求人情報に戻る
         </a>
@@ -388,7 +388,7 @@ export default async function handler(req: any, res: any) {
   </main>
 
 <script>
-  const publicId = ${JSON.stringify(publicId)};
+  const public_id = ${JSON.stringify(public_id)};
 
   const submitButton =
     document.getElementById("submitButton");
@@ -450,7 +450,7 @@ export default async function handler(req: any, res: any) {
             },
 
             body: JSON.stringify({
-              publicId,
+              public_id,
               name,
               email,
               phone,

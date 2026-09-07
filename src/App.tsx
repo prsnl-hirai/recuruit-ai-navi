@@ -453,6 +453,9 @@ const formatText = (text: string | undefined) => {
 function App() {
   const [form, setForm] = useState<JobForm>(initialForm);
 
+  /* LINE ID */
+  const [lineUserId, setLineUserId] = useState("");
+
   /* 仕事内容候補 */
   const [jobOptions, setJobOptions] = useState<string[]>([]);
   const [selectedJobOptions, setSelectedJobOptions] = useState<string[]>([]);
@@ -484,21 +487,20 @@ function App() {
       try {
         await liff.init({
           liffId: "2011376548-9M89rhkF",
-          // liffId: "",
         });
-
-        console.log("LIFF initialized");
-        console.log("isLoggedIn:", liff.isLoggedIn());
-        console.log("isInClient:", liff.isInClient());
 
         if (!liff.isLoggedIn()) {
           liff.login();
           return;
         }
 
-        console.log("LINEログイン成功");
+        const profile = await liff.getProfile();
+
+        console.log("LINE userId:", profile.userId);
+
+        setLineUserId(profile.userId);
       } catch (error) {
-        console.error("LIFF initialization error:", error);
+        console.error("LIFF初期化エラー:", error);
       }
     };
 
@@ -820,20 +822,27 @@ function App() {
 
       /*
       LINEユーザーID取得
-    */
-      let userId: string | null = null;
+      */
+      let userId = lineUserId;
 
-      try {
-        if (liff.isLoggedIn()) {
+      if (!userId && liff.isLoggedIn()) {
+        try {
           const profile = await liff.getProfile();
           userId = profile.userId;
+          setLineUserId(profile.userId);
+        } catch (error) {
+          console.error("LINEプロフィール取得エラー:", error);
         }
-      } catch (error) {
-        console.warn("LINEユーザー情報取得失敗:", error);
+      }
+
+      if (!userId) {
+        throw new Error(
+          "LINEユーザー情報を取得できませんでした。LINEからもう一度開いてください。"
+        );
       }
 
       const saveData = {
-        userId,
+        userId: userId,
         status,
 
         /* 入力情報 */
@@ -957,7 +966,7 @@ function App() {
         if (status === "0") {
           alert("求人を下書き保存しました。");
         } else if (status === "1") {
-          const publicUrl = `${window.location.origin}/jobs/${data.job.publicId}`;
+          const publicUrl = `${window.location.origin}/jobs/${data.job.public_id}`;
 
           console.log("公開求人URL:", publicUrl);
 

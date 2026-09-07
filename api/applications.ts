@@ -13,9 +13,9 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { publicId, name, email, phone, message } = req.body ?? {};
+    const { public_id, name, email, phone, message } = req.body ?? {};
 
-    if (!publicId) {
+    if (!public_id) {
       return res.status(400).json({
         success: false,
         message: "求人IDがありません。",
@@ -46,7 +46,7 @@ export default async function handler(req: any, res: any) {
         ai_title,
         title
       FROM jobs
-      WHERE public_id = ${publicId}
+      WHERE public_id = ${public_id}
         AND status = '1'
       LIMIT 1;
     `;
