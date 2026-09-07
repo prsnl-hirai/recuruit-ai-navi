@@ -28,12 +28,12 @@ export default async function handler(req: any, res: any) {
     }
 
     const rows = await sql`
-      SELECT *
-      FROM jobs
-      WHERE id = ${id}
-        AND status = '1'
-      LIMIT 1;
-    `;
+    SELECT *
+    FROM jobs
+    WHERE public_id = ${id}
+      AND status = '1'
+    LIMIT 1
+  `;
 
     if (rows.length === 0) {
       return res.status(404).send("求人が見つかりません");

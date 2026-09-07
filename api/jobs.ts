@@ -87,6 +87,7 @@ export default async function handler(req: any, res: any) {
           message: "statusが不正です",
         });
       }
+      const publicId = generatePublicId();
 
       const result = await sql`
         INSERT INTO jobs (
@@ -153,7 +154,8 @@ export default async function handler(req: any, res: any) {
           ai_location,
           ai_employment_type,
           ai_benefits,
-          ai_appeal_points
+          ai_appeal_points,
+          publicId
         )
         VALUES (
           ${userId || null},
@@ -219,7 +221,8 @@ export default async function handler(req: any, res: any) {
           ${aiLocation || null},
           ${aiEmploymentType || null},
           ${aiBenefits || null},
-          ${aiAppealPoints || null}
+          ${aiAppealPoints || null},
+          ${publicId || null}
         )
         RETURNING *;
       `;
@@ -471,4 +474,11 @@ export default async function handler(req: any, res: any) {
           : "求人データの処理に失敗しました",
     });
   }
+}
+
+// ========================================
+// ユニークID生成
+// ========================================
+function generatePublicId(): string {
+  return Math.floor(1000000000 + Math.random() * 9000000000).toString();
 }

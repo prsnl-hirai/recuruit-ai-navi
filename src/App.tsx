@@ -483,8 +483,8 @@ function App() {
     const initLiff = async () => {
       try {
         await liff.init({
-          liffId: "2011376548-9M89rhkF",
-          // liffId: "",
+          // liffId: "2011376548-9M89rhkF",
+          liffId: "",
         });
 
         console.log("LIFF initialized");
@@ -957,7 +957,7 @@ function App() {
         if (status === "0") {
           alert("求人を下書き保存しました。");
         } else if (status === "1") {
-          const publicUrl = `${window.location.origin}/jobs/${jobId}`;
+          const publicUrl = `${window.location.origin}/jobs/${data.job.publicId}`;
 
           console.log("公開求人URL:", publicUrl);
 
