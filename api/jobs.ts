@@ -155,7 +155,7 @@ export default async function handler(req: any, res: any) {
           ai_employment_type,
           ai_benefits,
           ai_appeal_points,
-          publicId
+          public_id
         )
         VALUES (
           ${userId || null},
