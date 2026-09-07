@@ -967,11 +967,7 @@ function App() {
         industry: form.industry,
         jobTitle: form.jobTitle,
 
-        /*
-        現在のApp.tsxにはまだrecruitmentCountがないため
-        null相当で保存
-      */
-        recruitmentCount: null,
+        recruitmentCount: form.recruitmentCount,
 
         jobDescription: selectedDescription,
         employmentType: form.employmentType,
@@ -980,50 +976,56 @@ function App() {
         prefecture: form.prefecture,
         city: form.city,
         streetAddress: form.streetAddress,
+        buildingName: form.buildingName,
+        location: [
+          form.prefecture,
+          form.city,
+          form.streetAddress,
+          form.buildingName,
+        ]
+          .filter(Boolean)
+          .join(""),
 
         workType: form.workType,
         startTime: form.startTime,
         endTime: form.endTime,
 
-        /*
-        現在のApp.tsxにはまだ以下の項目がないためnull
-      */
-        breakTime: null,
-        holidays: null,
+        breakTime: form.breakTime,
+        holidays: form.holidays,
 
         minDaysPerWeek: form.minDaysPerWeek,
         minHoursPerDay: form.minHoursPerDay,
 
-        overtime: null,
+        overtime: form.overtime,
 
         shiftExample: form.shiftExample,
 
         salaryType: form.salaryType,
         salary: form.salary,
 
-        raise: null,
-        bonus: null,
-        trialPeriod: null,
-        contractPeriod: null,
+        raise: form.raise,
+        bonus: form.bonus,
+        trialPeriod: form.trialPeriod,
+        contractPeriod: form.contractPeriod,
 
-        experience: null,
+        experience: form.experience,
 
-        requiredConditions: [],
-        welcomeConditions: [],
-        qualifications: [],
+        requiredConditions: form.requiredConditions,
+        welcomeConditions: form.welcomeConditions,
+        qualifications: form.qualifications,
 
         benefits: form.benefits,
 
-        socialInsurance: null,
-        transportationAllowance: null,
-        allowances: [],
-        otherBenefits: null,
+        socialInsurance: form.socialInsurance,
+        transportationAllowance: form.transportationAllowance,
+        allowances: form.allowances,
+        otherBenefits: form.otherBenefits,
 
-        workplaceAtmosphere: [],
-        ageGroup: [],
-        genderRatio: null,
+        workplaceAtmosphere: form.workplaceAtmosphere,
+        ageGroup: form.ageGroup,
+        genderRatio: form.genderRatio,
 
-        appealPoints: [],
+        appealPoints: form.appealPoints,
 
         aiRequest: form.aiRequest,
 
@@ -1078,27 +1080,23 @@ function App() {
       console.log("求人保存成功:", data.job);
 
       if (data.job?.id) {
-        const jobId = Number(data.job.id);
+        setSavedJobId(Number(data.job.id));
 
-        setSavedJobId(jobId);
+        if (status === "0") {
+          alert("求人を下書き保存しました。");
+        }
 
-        if (data.job?.id) {
-          setSavedJobId(Number(data.job.id));
+        if (status === "1") {
+          const publicId = data.job?.publicId ?? data.job?.public_id ?? "";
 
-          if (status === "0") {
-            alert("求人を下書き保存しました。");
-          }
+          if (publicId) {
+            setPublishedPublicId(publicId);
 
-          if (status === "1") {
-            const publicId = data.job?.publicId ?? data.job?.public_id ?? "";
+            const publicUrl = `${window.location.origin}/jobs/${publicId}`;
 
-            if (publicId) {
-              setPublishedPublicId(publicId);
-
-              const publicUrl = `${window.location.origin}/jobs/${publicId}`;
-
-              alert(`求人を公開しました。\n\n${publicUrl}`);
-            }
+            alert(`求人を公開しました。\n\n${publicUrl}`);
+          } else {
+            alert("求人を公開しましたが、公開URLを取得できませんでした。");
           }
         }
       }
@@ -1110,6 +1108,181 @@ function App() {
       setSaving(false);
     }
   };
+
+  /* ========================================
+     求人管理画面から求人内容編集
+  ======================================== */
+  useEffect(() => {
+    if (currentPage !== "edit" || editingJobId === null) {
+      return;
+    }
+
+    const loadEditJob = async () => {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+
+        const response = await fetch(`/api/jobs?id=${editingJobId}`);
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || "求人情報を取得できませんでした。");
+        }
+
+        const job = data.job;
+
+        console.log("編集求人データ:", job);
+
+        const toArray = (value: unknown): string[] => {
+          if (Array.isArray(value)) {
+            return value.filter(
+              (item): item is string =>
+                typeof item === "string" && item.trim() !== "",
+            );
+          }
+
+          if (typeof value === "string" && value.trim()) {
+            return value
+              .split(/[、\n]/)
+              .map((item) => item.trim())
+              .filter(Boolean);
+          }
+
+          return [];
+        };
+
+        const workType: WorkType =
+          job.work_type === "固定時間" ? "固定時間" : "シフト制";
+
+        const salaryType: SalaryType =
+          job.salary_type === "日給" ||
+          job.salary_type === "月給" ||
+          job.salary_type === "年俸"
+            ? job.salary_type
+            : "時給";
+
+        const loadedForm: JobForm = {
+          storeName: job.company_name ?? "",
+          industry: job.industry ?? "",
+          jobTitle: job.job_title ?? "",
+          employmentType: job.employment_type ?? "アルバイト・パート",
+          recruitmentCount: job.recruitment_count ?? "1名",
+          postalCode: job.postal_code ?? "",
+          prefecture: job.prefecture ?? "",
+          city: job.city ?? "",
+          streetAddress: job.street_address ?? "",
+          buildingName: job.building_name ?? "",
+
+          jobDescription: job.job_description ?? "",
+
+          workType,
+          startTime: job.start_time ?? "",
+          endTime: job.end_time ?? "",
+          breakTime: job.break_time ?? "60分",
+          holidays: job.holidays ?? "シフト制",
+          minDaysPerWeek: job.min_days_per_week ?? "",
+          minHoursPerDay: job.min_hours_per_day ?? "",
+          overtime: job.overtime ?? "ほぼなし",
+          shiftExample: job.shift_example ?? "",
+
+          salaryType,
+          salary: job.salary ?? "",
+          raise: job.raise ?? "なし",
+          bonus: job.bonus ?? "なし",
+          trialPeriod: job.trial_period ?? "なし",
+          contractPeriod: job.contract_period ?? "無期雇用",
+
+          requiredConditions: toArray(job.required_conditions),
+          welcomeConditions: toArray(job.welcome_conditions),
+          experience: job.experience ?? "未経験OK",
+          qualifications: toArray(job.qualifications),
+
+          benefits: toArray(job.benefits),
+          socialInsurance: job.social_insurance ?? "勤務条件による",
+          transportationAllowance: job.transportation_allowance ?? "なし",
+          allowances: toArray(job.allowances),
+          otherBenefits: job.other_benefits ?? "",
+
+          workplaceAtmosphere: toArray(job.workplace_atmosphere),
+          ageGroup: toArray(job.age_group),
+          genderRatio: job.gender_ratio ?? "",
+
+          appealPoints: toArray(job.appeal_points),
+          aiRequest: job.ai_request ?? "",
+        };
+
+        setForm(loadedForm);
+
+        /* 保存済みの仕事内容も編集画面に表示 */
+        const descriptions = job.job_description
+          ? String(job.job_description)
+              .split("\n")
+              .map((item) => item.trim())
+              .filter(Boolean)
+          : [];
+
+        setJobOptions(descriptions);
+        setSelectedJobOptions(descriptions);
+        setJobDescriptionOther("");
+
+        const score: Score = {
+          total: Number(job.score?.total ?? 0),
+          salary: Number(job.score?.salary ?? 0),
+          workConditions: Number(job.score?.workConditions ?? 0),
+          benefits: Number(job.score?.benefits ?? 0),
+          accessibility: Number(job.score?.accessibility ?? 0),
+          appeal: Number(job.score?.appeal ?? 0),
+        };
+
+        setResult({
+          nearestStations: Array.isArray(job.nearest_stations)
+            ? job.nearest_stations
+            : [],
+          score,
+          marketSummary: Array.isArray(job.market_summary)
+            ? job.market_summary
+            : [],
+          improvementPoints: Array.isArray(job.improvement_points)
+            ? job.improvement_points
+            : [],
+          job: {
+            title: job.ai_title ?? job.title ?? "",
+            catchCopy: job.catch_copy ?? "",
+            description: job.ai_description ?? job.job_description ?? "",
+            requirements: job.ai_requirements ?? "",
+            salary: job.ai_salary ?? job.salary ?? "",
+            workingHours:
+              job.ai_working_hours ??
+              [job.start_time, job.end_time].filter(Boolean).join(" ～ "),
+            location:
+              job.ai_location ??
+              job.location ??
+              [job.prefecture, job.city, job.street_address, job.building_name]
+                .filter(Boolean)
+                .join(""),
+            employmentType: job.ai_employment_type ?? job.employment_type ?? "",
+            benefits: job.ai_benefits ?? job.benefits ?? "",
+            appealPoints: job.ai_appeal_points ?? "",
+          },
+        });
+
+        setSavedJobId(Number(job.id));
+        setPublishedPublicId(job.public_id ?? "");
+      } catch (error) {
+        console.error("編集求人取得エラー:", error);
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "求人情報を取得できませんでした。",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadEditJob();
+  }, [currentPage, editingJobId]);
 
   /* ========================================
    求人内容編集
@@ -1136,6 +1309,15 @@ function App() {
     return (
       <JobManagement
         onCreateJob={() => {
+          setEditingJobId(null);
+          setSavedJobId(null);
+          setPublishedPublicId("");
+          setForm(initialForm);
+          setJobOptions([]);
+          setSelectedJobOptions([]);
+          setJobDescriptionOther("");
+          setResult(null);
+          setErrorMessage("");
           setCurrentPage("create");
         }}
         onEditJob={(jobId) => {
@@ -1146,145 +1328,6 @@ function App() {
       />
     );
   }
-
-  /* ========================================
-   求人管理画面から求人内容編集
-  ======================================== */
-  useEffect(() => {
-    if (currentPage !== "edit" || editingJobId === null) {
-      return;
-    }
-
-    const loadEditJob = async () => {
-      try {
-        setLoading(true);
-        setErrorMessage("");
-
-        const response = await fetch(`/api/jobs?id=${editingJobId}`);
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.message || "求人情報を取得できませんでした。");
-        }
-
-        const job = data.job;
-
-        console.log("編集求人データ:", job);
-
-        /*
-         * DB → フォームへセット
-         */
-        setForm((prev) => ({
-          ...prev,
-
-          storeName: job.company_name ?? "",
-
-          industry: job.industry ?? "",
-
-          jobTitle: job.job_title ?? "",
-
-          employmentType: job.employment_type ?? "",
-
-          postalCode: job.postal_code ?? "",
-
-          prefecture: job.prefecture ?? "",
-
-          city: job.city ?? "",
-
-          streetAddress: job.street_address ?? "",
-
-          buildingName: job.building_name ?? "",
-
-          workType: job.work_type ?? "固定時間",
-
-          startTime: job.start_time ?? "",
-
-          endTime: job.end_time ?? "",
-
-          shiftExample: job.shift_example ?? "",
-
-          minDaysPerWeek: job.min_days_per_week ?? "",
-
-          minHoursPerDay: job.min_hours_per_day ?? "",
-
-          salaryType: job.salary_type ?? "時給",
-
-          salary: job.salary ?? "",
-
-          benefits: job.benefits
-            ? String(job.benefits).split("、").filter(Boolean)
-            : [],
-
-          aiRequest: job.ai_request ?? "",
-        }));
-
-        /*
-         * 仕事内容
-         */
-        const descriptions = job.job_description
-          ? String(job.job_description).split("\n").filter(Boolean)
-          : [];
-
-        setSelectedJobOptions(descriptions);
-
-        setJobDescriptionOther("");
-
-        /*
-         * AI生成結果
-         */
-        setResult({
-          nearestStations: job.nearest_stations ?? [],
-
-          score: job.score ?? null,
-
-          marketSummary: job.market_summary ?? [],
-
-          improvementPoints: job.improvement_points ?? [],
-
-          job: {
-            title: job.ai_title ?? job.title ?? "",
-
-            catchCopy: job.catch_copy ?? "",
-
-            description: job.ai_description ?? job.job_description ?? "",
-
-            requirements: job.ai_requirements ?? "",
-
-            salary: job.ai_salary ?? job.salary ?? "",
-
-            workingHours: job.ai_working_hours ?? "",
-
-            location: job.ai_location ?? job.location ?? "",
-
-            employmentType: job.ai_employment_type ?? job.employment_type ?? "",
-
-            benefits: job.ai_benefits ?? job.benefits ?? "",
-
-            appealPoints: job.ai_appeal_points ?? "",
-          },
-        });
-
-        /*
-         * 保存済み求人IDとして保持
-         * → 次回保存時はPOSTではなくPATCH
-         */
-        setSavedJobId(Number(job.id));
-      } catch (error) {
-        console.error("編集求人取得エラー:", error);
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "求人情報を取得できませんでした。",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadEditJob();
-  }, [currentPage, editingJobId]);
 
   /* ========================================
      レンダリング
