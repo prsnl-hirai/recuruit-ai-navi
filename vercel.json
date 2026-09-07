@@ -8,6 +8,10 @@
     {
       "source": "/indeed/jobs.xml",
       "destination": "/api/indeed-feed"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
