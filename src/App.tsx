@@ -7,6 +7,7 @@ import ApplicantManagement from "./ApplicantManagement";
 import CompanyPage from "./CompanyPage";
 import PrivacyPage from "./PrivacyPage";
 import PublicJobList from "./PublicJobList";
+import SubsidyDiagnosis from "./SubsidyDiagnosis";
 
 type WorkType = "固定時間" | "シフト制";
 type SalaryType = "時給" | "日給" | "月給" | "年俸";
@@ -521,7 +522,7 @@ function App() {
   /* 求人publishedID */
   const [publishedPublicId, setPublishedPublicId] = useState("");
 
-  type PageType = "create" | "jobs" | "edit" | "applicants";
+  type PageType = "create" | "jobs" | "edit" | "applicants" | "subsidy";
 
   /* 現在のページ */
   const [currentPage, setCurrentPage] = useState<PageType>("create");
@@ -546,6 +547,8 @@ function App() {
 
     if (page === "jobs") {
       setCurrentPage("jobs");
+    } else if (page === "subsidy") {
+      setCurrentPage("subsidy");
     } else if (page === "applicants") {
       const jobId = params.get("jobId");
       const parsedJobId = jobId ? Number(jobId) : null;
@@ -1356,6 +1359,20 @@ function App() {
     });
   };
 
+  if (currentPage === "subsidy") {
+    return (
+      <SubsidyDiagnosis
+        onBack={() => {
+          setCurrentPage("create");
+
+          const url = new URL(window.location.href);
+          url.searchParams.delete("page");
+          window.history.pushState({}, "", url.toString());
+        }}
+      />
+    );
+  }
+
   if (currentPage === "applicants") {
     return (
       <ApplicantManagement
@@ -1433,54 +1450,39 @@ function App() {
           style={{
             maxWidth: "700px",
             margin: "0 auto",
-            position: "relative",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            minHeight: "52px",
+            gap: "12px",
           }}
         >
-          {currentPage === "edit" && editingJobId !== null && (
-            <button
-              type="button"
-              style={{
-                position: "absolute",
-                left: 0,
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "#ffffff",
-                padding: "8px 10px",
-                color: "#2563eb",
-                fontSize: "13px",
-                fontWeight: 700,
-                lineHeight: 1.2,
-                whiteSpace: "nowrap",
-                cursor: "pointer",
-              }}
-              onClick={() => {
-                setEditingJobId(null);
-                setResult(null);
-                setErrorMessage("");
-                setCurrentPage("jobs");
-
-                // URLも求人一覧に合わせる
-                const url = new URL(window.location.href);
-                url.searchParams.set("page", "jobs");
-                url.searchParams.delete("jobId");
-                window.history.pushState({}, "", url.toString());
-              }}
-            >
-              ← 求人一覧
-            </button>
-          )}
-
-          <div
-            className="header-inner"
+          {/* {currentPage === "edit" && editingJobId !== null && ( */}
+          <button
+            type="button"
             style={{
-              width: "auto",
-              margin: 0,
+              border: "none",
+              background: "transparent",
+              padding: "6px 0",
+              color: "#2563eb",
+              fontSize: "14px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              setEditingJobId(null);
+              setResult(null);
+              setErrorMessage("");
+              setCurrentPage("jobs");
+
+              // URLも求人一覧に合わせる
+              const url = new URL(window.location.href);
+              url.searchParams.set("page", "jobs");
+              window.history.pushState({}, "", url.toString());
             }}
           >
+            ← 求人一覧に戻る
+          </button>
+          {/* )} */}
+          <div className="header-inner">
             <div className="logo">
               <div className="logo-icon">🤖</div>
 
