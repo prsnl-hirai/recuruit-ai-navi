@@ -239,6 +239,8 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
   const [consultationSending, setConsultationSending] = useState(false);
   const [consultationDone, setConsultationDone] = useState(false);
   const [consultationError, setConsultationError] = useState("");
+  const [selectedConsultationSubsidyIds, setSelectedConsultationSubsidyIds] =
+    useState<number[]>([]);
   const [consultationForm, setConsultationForm] = useState({
     companyName: "",
     contactName: "",
@@ -493,6 +495,7 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
     setShowConsultation(false);
     setConsultationDone(false);
     setConsultationError("");
+    setSelectedConsultationSubsidyIds([]);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -506,6 +509,11 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
       setConsultationError(
         "会社名・担当者名・メールアドレス・都道府県を入力してください",
       );
+      return;
+    }
+
+    if (selectedConsultationSubsidyIds.length === 0) {
+      setConsultationError("相談したい助成金を1つ以上選択してください");
       return;
     }
 
@@ -531,14 +539,18 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
           prefecture: consultationForm.prefecture.trim(),
           consultationMessage: consultationForm.message.trim(),
           answers,
-          subsidyIds: candidates.map((item) => item.subsidy.id),
-          results: candidates.map((item) => ({
-            subsidyId: item.subsidy.id,
-            matchLevel: item.matchLevel,
-            score: item.score,
-            reasons: item.reasons,
-            checks: item.checks,
-          })),
+          subsidyIds: selectedConsultationSubsidyIds,
+          results: candidates
+            .filter((item) =>
+              selectedConsultationSubsidyIds.includes(item.subsidy.id),
+            )
+            .map((item) => ({
+              subsidyId: item.subsidy.id,
+              matchLevel: item.matchLevel,
+              score: item.score,
+              reasons: item.reasons,
+              checks: item.checks,
+            })),
           consentToShare: consultationForm.consent,
         }),
       });
@@ -959,6 +971,9 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
               onClick={() => {
                 setShowConsultation(true);
                 setConsultationError("");
+                setSelectedConsultationSubsidyIds(
+                  candidates.map((item) => item.subsidy.id),
+                );
               }}
               style={{
                 width: "100%",
@@ -1053,6 +1068,104 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
                   />
                 </label>
               ))}
+
+              <div style={{ marginTop: "14px" }}>
+                <div
+                  style={{
+                    marginBottom: "7px",
+                    fontSize: "12px",
+                    fontWeight: 800,
+                  }}
+                >
+                  相談したい助成金
+                </div>
+                <div style={{ display: "grid", gap: "8px" }}>
+                  {candidates.map((item) => {
+                    const subsidyId = item.subsidy.id;
+                    const checked =
+                      selectedConsultationSubsidyIds.includes(subsidyId);
+
+                    return (
+                      <label
+                        key={subsidyId}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "10px",
+                          padding: "11px 12px",
+                          background: checked ? "#ecfdf3" : "#f9fafb",
+                          border: checked
+                            ? "1px solid #86efac"
+                            : "1px solid #e5e7eb",
+                          borderRadius: "10px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setSelectedConsultationSubsidyIds((prev) =>
+                              prev.includes(subsidyId)
+                                ? prev.filter((id) => id !== subsidyId)
+                                : [...prev, subsidyId],
+                            )
+                          }
+                          style={{
+                            appearance: "auto",
+                            WebkitAppearance: "checkbox",
+                            width: "18px",
+                            height: "18px",
+                            minWidth: "18px",
+                            flex: "0 0 18px",
+                            margin: "1px 0 0 0",
+                            padding: 0,
+                            cursor: "pointer",
+                            accentColor: "#06c755",
+                          }}
+                        />
+                        <span style={{ flex: 1 }}>
+                          <span
+                            style={{
+                              display: "block",
+                              color: "#111827",
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {item.subsidy.name}
+                          </span>
+                          {item.subsidy.course_name && (
+                            <span
+                              style={{
+                                display: "block",
+                                marginTop: "2px",
+                                color: "#6b7280",
+                                fontSize: "11px",
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {item.subsidy.course_name}
+                            </span>
+                          )}
+                          <span
+                            style={{
+                              display: "block",
+                              marginTop: "3px",
+                              color: "#047857",
+                              fontSize: "10px",
+                              fontWeight: 700,
+                            }}
+                          >
+                            条件一致度 {item.score}%
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
 
               <label style={{ display: "block", marginTop: "12px" }}>
                 <div
