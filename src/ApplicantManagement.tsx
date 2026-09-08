@@ -21,6 +21,13 @@ type Application = {
   title?: string;
   ai_title?: string;
   company_name?: string;
+
+  // 面接情報
+  interview_date?: string | null;
+  interview_time?: string | null;
+  interview_method?: string | null;
+  interview_location?: string | null;
+  interview_memo?: string | null;
 };
 
 type Props = {
@@ -46,6 +53,13 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
+
+  const [interviewDate, setInterviewDate] = useState("");
+  const [interviewTime, setInterviewTime] = useState("");
+  const [interviewMethod, setInterviewMethod] = useState("");
+  const [interviewLocation, setInterviewLocation] = useState("");
+  const [interviewMemo, setInterviewMemo] = useState("");
+  const [savingInterview, setSavingInterview] = useState(false);
 
   /*
    * 応募者一覧取得
@@ -399,6 +413,90 @@ ${company}
     }
   };
 
+  const handleInterviewSave = async () => {
+    if (!selectedApplication) return;
+
+    if (!interviewDate) {
+      alert("面接日を入力してください。");
+      return;
+    }
+
+    if (!interviewTime) {
+      alert("面接時間を入力してください。");
+      return;
+    }
+
+    if (!interviewMethod) {
+      alert("面接方法を選択してください。");
+      return;
+    }
+
+    try {
+      setSavingInterview(true);
+
+      let userId = "";
+
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+      }
+
+      if (!userId) {
+        throw new Error("LINEユーザー情報を取得できませんでした。");
+      }
+
+      const response = await fetch("/api/applications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "save-interview",
+          id: selectedApplication.id,
+          userId,
+          interviewDate,
+          interviewTime,
+          interviewMethod,
+          interviewLocation,
+          interviewMemo,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "面接情報を保存できませんでした。");
+      }
+
+      const updated: Application = {
+        ...selectedApplication,
+        interview_date: interviewDate,
+        interview_time: interviewTime,
+        interview_method: interviewMethod,
+        interview_location: interviewLocation || null,
+        interview_memo: interviewMemo,
+      };
+
+      setApplications((prev) =>
+        prev.map((item) =>
+          item.id === selectedApplication.id ? updated : item,
+        ),
+      );
+      setSelectedApplication(updated);
+
+      alert("面接情報を保存しました。");
+    } catch (error) {
+      console.error("面接情報保存エラー:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "面接情報の保存中にエラーが発生しました。",
+      );
+    } finally {
+      setSavingInterview(false);
+    }
+  };
+
   const handleMemoSave = async () => {
     if (!selectedApplication) {
       return;
@@ -681,6 +779,19 @@ ${company}
               setEmailTemplate("");
               setEmailSubject("");
               setEmailBody("");
+              setInterviewDate(
+                application.interview_date
+                  ? String(application.interview_date).slice(0, 10)
+                  : "",
+              );
+              setInterviewTime(
+                application.interview_time
+                  ? String(application.interview_time).slice(0, 5)
+                  : "",
+              );
+              setInterviewMethod(application.interview_method ?? "");
+              setInterviewLocation(application.interview_location ?? "");
+              setInterviewMemo(application.interview_memo ?? "");
             }}
             style={{
               flex: 1,
@@ -1050,6 +1161,171 @@ ${company}
                   </div>
                 )}
               </div>
+
+              {String(selectedApplication.status ?? "0") === "2" && (
+                <div
+                  style={{
+                    padding: "14px",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "10px",
+                    background: "#eff6ff",
+                  }}
+                >
+                  <strong>📅 面接予定</strong>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "10px",
+                      marginTop: "10px",
+                    }}
+                  >
+                    <label style={{ fontSize: "13px", fontWeight: 700 }}>
+                      面接日
+                      <input
+                        type="date"
+                        value={interviewDate}
+                        onChange={(e) => setInterviewDate(e.target.value)}
+                        style={{
+                          width: "100%",
+                          boxSizing: "border-box",
+                          marginTop: "6px",
+                          padding: "10px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "8px",
+                          background: "#fff",
+                          font: "inherit",
+                        }}
+                      />
+                    </label>
+
+                    <label style={{ fontSize: "13px", fontWeight: 700 }}>
+                      面接時間
+                      <input
+                        type="time"
+                        value={interviewTime}
+                        onChange={(e) => setInterviewTime(e.target.value)}
+                        style={{
+                          width: "100%",
+                          boxSizing: "border-box",
+                          marginTop: "6px",
+                          padding: "10px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "8px",
+                          background: "#fff",
+                          font: "inherit",
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <label
+                    style={{
+                      display: "block",
+                      marginTop: "10px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    面接方法
+                    <select
+                      value={interviewMethod}
+                      onChange={(e) => setInterviewMethod(e.target.value)}
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        marginTop: "6px",
+                        padding: "10px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        background: "#fff",
+                        font: "inherit",
+                      }}
+                    >
+                      <option value="">選択してください</option>
+                      <option value="対面">対面</option>
+                      <option value="オンライン">オンライン</option>
+                      <option value="電話">電話</option>
+                    </select>
+                  </label>
+
+                  <label
+                    style={{
+                      display: "block",
+                      marginTop: "10px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    面接場所 / URL
+                    <input
+                      type="text"
+                      value={interviewLocation}
+                      onChange={(e) => setInterviewLocation(e.target.value)}
+                      placeholder="例：名古屋店 / Google Meet URL"
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        marginTop: "6px",
+                        padding: "10px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        background: "#fff",
+                        font: "inherit",
+                      }}
+                    />
+                  </label>
+
+                  <label
+                    style={{
+                      display: "block",
+                      marginTop: "10px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    面接メモ
+                    <textarea
+                      value={interviewMemo}
+                      onChange={(e) => setInterviewMemo(e.target.value)}
+                      maxLength={5000}
+                      rows={4}
+                      placeholder="例：履歴書持参、担当：平井"
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        marginTop: "6px",
+                        padding: "10px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        background: "#fff",
+                        font: "inherit",
+                        resize: "vertical",
+                      }}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handleInterviewSave}
+                    disabled={savingInterview}
+                    style={{
+                      width: "100%",
+                      marginTop: "10px",
+                      padding: "11px",
+                      border: "none",
+                      borderRadius: "8px",
+                      background: savingInterview ? "#9ca3af" : "#2563eb",
+                      color: "#fff",
+                      fontWeight: 700,
+                      cursor: savingInterview ? "wait" : "pointer",
+                    }}
+                  >
+                    {savingInterview ? "保存中..." : "💾 面接情報を保存"}
+                  </button>
+                </div>
+              )}
 
               {selectedApplication.email && (
                 <div>

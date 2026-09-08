@@ -28,6 +28,11 @@ export default async function handler(req: any, res: any) {
               a.phone,
               a.message,
               a.memo,
+              a.interview_date,
+              a.interview_time,
+              a.interview_method,
+              a.interview_location,
+              a.interview_memo,
               a.status,
               a.source,
               a.created_at,
@@ -52,6 +57,11 @@ export default async function handler(req: any, res: any) {
               a.phone,
               a.message,
               a.memo,
+              a.interview_date,
+              a.interview_time,
+              a.interview_method,
+              a.interview_location,
+              a.interview_memo,
               a.status,
               a.source,
               a.created_at,
@@ -201,6 +211,84 @@ export default async function handler(req: any, res: any) {
           success: true,
           message: "メールを送信しました。",
           emailId: result?.id ?? null,
+        });
+      }
+
+      // ----------------------------------------
+      // 面接情報保存
+      // ----------------------------------------
+      if (action === "save-interview") {
+        const interviewDate =
+          String(req.body?.interviewDate ?? "").trim() || null;
+        const interviewTime =
+          String(req.body?.interviewTime ?? "").trim() || null;
+        const interviewMethod =
+          String(req.body?.interviewMethod ?? "").trim() || null;
+        const interviewLocation =
+          String(req.body?.interviewLocation ?? "").trim() || null;
+        const interviewMemo = String(req.body?.interviewMemo ?? "");
+
+        const allowedMethods = ["対面", "オンライン", "電話"];
+
+        if (
+          interviewMethod !== null &&
+          !allowedMethods.includes(interviewMethod)
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "面接方法が正しくありません。",
+          });
+        }
+
+        if (interviewMemo.length > 5000) {
+          return res.status(400).json({
+            success: false,
+            message: "面接メモは5000文字以内で入力してください。",
+          });
+        }
+
+        const applications = await sql`
+          UPDATE applications AS a
+          SET
+            interview_date = ${interviewDate},
+            interview_time = ${interviewTime},
+            interview_method = ${interviewMethod},
+            interview_location = ${interviewLocation},
+            interview_memo = ${interviewMemo}
+          FROM jobs AS j
+          WHERE a.id = ${applicationId}
+            AND a.job_id = j.id
+            AND j.user_id = ${ownerUserId}
+            AND j.status <> '9'
+          RETURNING
+            a.id,
+            a.job_id,
+            a.name,
+            a.email,
+            a.phone,
+            a.message,
+            a.memo,
+            a.interview_date,
+            a.interview_time,
+            a.interview_method,
+            a.interview_location,
+            a.interview_memo,
+            a.status,
+            a.source,
+            a.created_at
+        `;
+
+        if (applications.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "応募情報が見つかりませんでした。",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "面接情報を保存しました。",
+          application: applications[0],
         });
       }
 
