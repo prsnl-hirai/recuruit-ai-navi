@@ -1340,23 +1340,25 @@ function App() {
         </div>
       </header>
 
-      <button
-        type="button"
-        className="back-to-jobs-button"
-        onClick={() => {
-          setEditingJobId(null);
-          setResult(null);
-          setErrorMessage("");
-          setCurrentPage("jobs");
+      {currentPage === "edit" && editingJobId !== null && (
+        <button
+          type="button"
+          className="back-to-jobs-button"
+          onClick={() => {
+            setEditingJobId(null);
+            setResult(null);
+            setErrorMessage("");
+            setCurrentPage("jobs");
 
-          // URLも求人一覧に合わせる
-          const url = new URL(window.location.href);
-          url.searchParams.set("page", "jobs");
-          window.history.pushState({}, "", url.toString());
-        }}
-      >
-        ← 求人一覧に戻る
-      </button>
+            // URLも求人一覧に合わせる
+            const url = new URL(window.location.href);
+            url.searchParams.set("page", "jobs");
+            window.history.pushState({}, "", url.toString());
+          }}
+        >
+          ← 求人一覧に戻る
+        </button>
+      )}
 
       {/* ====================================
           Intro
