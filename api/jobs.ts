@@ -297,213 +297,55 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === "PATCH") {
       try {
-        const {
-          id,
-          userId,
-          status = "0",
-
-          title,
-          companyName,
-          industry,
-          jobTitle,
-          recruitmentCount,
-          jobDescription,
-          employmentType,
-
-          postalCode,
-          prefecture,
-          city,
-          streetAddress,
-          buildingName,
-          location,
-
-          workType,
-          startTime,
-          endTime,
-          breakTime,
-          holidays,
-          minDaysPerWeek,
-          minHoursPerDay,
-          overtime,
-          shiftExample,
-
-          salaryType,
-          salary,
-          raise,
-          bonus,
-          trialPeriod,
-          contractPeriod,
-
-          experience,
-          requiredConditions,
-          welcomeConditions,
-          qualifications,
-
-          benefits,
-          socialInsurance,
-          transportationAllowance,
-          allowances,
-          otherBenefits,
-
-          workplaceAtmosphere,
-          ageGroup,
-          genderRatio,
-
-          appealPoints,
-          aiRequest,
-
-          nearestStations,
-          score,
-          marketSummary,
-          improvementPoints,
-
-          aiTitle,
-          catchCopy,
-          aiDescription,
-          aiRequirements,
-          aiSalary,
-          aiWorkingHours,
-          aiLocation,
-          aiEmploymentType,
-          aiBenefits,
-          aiAppealPoints,
-        } = req.body ?? {};
+        const { id, status, ...rest } = req.body ?? {};
 
         if (!id) {
           return res.status(400).json({
             success: false,
-            message: "求人IDが指定されていません。",
+            message: "求人IDがありません",
           });
         }
 
-        if (!["0", "1", "9"].includes(status)) {
-          return res.status(400).json({
-            success: false,
-            message: "statusが不正です。",
-          });
-        }
+        // 公開・非公開トグルからの更新
+        // id と status だけ送られてきた場合
+        if (status !== undefined && Object.keys(rest).length === 0) {
+          if (status !== "0" && status !== "1") {
+            return res.status(400).json({
+              success: false,
+              message: "公開状態が不正です",
+            });
+          }
 
-        const rows = await sql`
+          const rows = await sql`
         UPDATE jobs
         SET
-          user_id = ${userId},
-  
           status = ${status},
-  
-          title = ${title},
-          company_name = ${companyName},
-          industry = ${industry},
-          job_title = ${jobTitle},
-          recruitment_count = ${recruitmentCount},
-          job_description = ${jobDescription},
-          employment_type = ${employmentType},
-  
-          postal_code = ${postalCode || null},
-          prefecture = ${prefecture || null},
-          city = ${city || null},
-          street_address = ${streetAddress || null},
-          building_name = ${buildingName || null},
-          location = ${location},
-  
-          work_type = ${workType},
-          start_time = ${startTime},
-          end_time = ${endTime},
-          break_time = ${breakTime},
-          holidays = ${holidays},
-          min_days_per_week = ${minDaysPerWeek},
-          min_hours_per_day = ${minHoursPerDay},
-          overtime = ${overtime},
-          shift_example = ${shiftExample},
-  
-          salary_type = ${salaryType},
-          salary = ${salary},
-          raise = ${raise},
-          bonus = ${bonus},
-          trial_period = ${trialPeriod},
-          contract_period = ${contractPeriod},
-  
-          experience = ${experience},
-  
-          required_conditions =
-            ${JSON.stringify(requiredConditions ?? [])}::jsonb,
-  
-          welcome_conditions =
-            ${JSON.stringify(welcomeConditions ?? [])}::jsonb,
-  
-          qualifications =
-            ${JSON.stringify(qualifications ?? [])}::jsonb,
-  
-          benefits =
-            ${Array.isArray(benefits) ? benefits.join("、") : (benefits ?? "")},
-  
-          social_insurance = ${socialInsurance},
-          transportation_allowance = ${transportationAllowance},
-  
-          allowances =
-            ${JSON.stringify(allowances ?? [])}::jsonb,
-  
-          other_benefits = ${otherBenefits},
-  
-          workplace_atmosphere =
-            ${JSON.stringify(workplaceAtmosphere ?? [])}::jsonb,
-  
-          age_group =
-            ${JSON.stringify(ageGroup ?? [])}::jsonb,
-  
-          gender_ratio = ${genderRatio},
-  
-          appeal_points =
-            ${JSON.stringify(appealPoints ?? [])}::jsonb,
-  
-          ai_request = ${aiRequest},
-  
-          nearest_stations =
-            ${JSON.stringify(nearestStations ?? [])}::jsonb,
-  
-          score =
-            ${JSON.stringify(score ?? {})}::jsonb,
-  
-          market_summary =
-            ${JSON.stringify(marketSummary ?? [])}::jsonb,
-  
-          improvement_points =
-            ${JSON.stringify(improvementPoints ?? [])}::jsonb,
-  
-          ai_title = ${aiTitle},
-          catch_copy = ${catchCopy},
-          ai_description = ${aiDescription},
-          ai_requirements = ${aiRequirements},
-          ai_salary = ${aiSalary},
-          ai_working_hours = ${aiWorkingHours},
-          ai_location = ${aiLocation},
-          ai_employment_type = ${aiEmploymentType},
-          ai_benefits = ${aiBenefits},
-          ai_appeal_points = ${aiAppealPoints},
-  
-          updated_at = NOW()
-  
+          updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
-  
-        RETURNING *;
+        RETURNING *
       `;
 
-        if (rows.length === 0) {
-          return res.status(404).json({
-            success: false,
-            message: "求人が見つかりません。",
+          if (rows.length === 0) {
+            return res.status(404).json({
+              success: false,
+              message: "求人が見つかりません",
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            job: rows[0],
           });
         }
 
-        return res.status(200).json({
-          success: true,
-          job: rows[0],
-        });
-      } catch (error: any) {
+        // ↓ この下に通常の求人編集PATCH
+        // ...
+      } catch (error) {
         console.error("求人更新エラー:", error);
 
         return res.status(500).json({
           success: false,
-          message: error?.message || "求人の更新に失敗しました。",
+          message: "求人の更新に失敗しました",
         });
       }
     }
