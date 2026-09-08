@@ -748,6 +748,12 @@ export default async function handler(req: any, res: any) {
     求人AIナビ
     <br>
     AIで、求人作成をもっと簡単に。
+    <br>
+    <br>
+    <a href="/company">運営会社</a>
+    <span>｜</span>
+    <a href="/privacy">プライバシーポリシー</a>
+</footer>
   </footer>
 
 </body>
