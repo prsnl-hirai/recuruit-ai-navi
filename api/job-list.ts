@@ -20,6 +20,21 @@ export default async function handler(req: any, res: any) {
       });
     }
 
+    /**
+     * 掲載終了日を過ぎた公開求人を自動で非公開にする
+     */
+    await sql`
+      UPDATE jobs
+      SET
+        status = '0',
+        updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ${userId}
+        AND status = '1'
+        AND valid_through IS NOT NULL
+        AND valid_through <
+          (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+    `;
+
     const rows = await sql`
       SELECT
         id,
@@ -42,6 +57,8 @@ export default async function handler(req: any, res: any) {
         city,
         street_address,
         building_name,
+
+        valid_through,
 
         created_at,
         updated_at
