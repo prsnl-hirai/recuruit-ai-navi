@@ -29,5 +29,11 @@
       "source": "/robots.txt",
       "destination": "/api/robots"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/expire-jobs",
+      "schedule": "0 15 * * *"
+    }
   ]
 }
