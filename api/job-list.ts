@@ -11,6 +11,31 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    const isCronRequest = String(req.query.cron ?? "") === "1";
+
+    /**
+     * Cron実行
+     * 全ユーザーの掲載終了済み求人を自動で非公開にする
+     */
+    if (isCronRequest) {
+      const rows = await sql`
+        UPDATE jobs
+        SET
+          status = '0',
+          updated_at = CURRENT_TIMESTAMP
+        WHERE status = '1'
+          AND valid_through IS NOT NULL
+          AND valid_through <
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+        RETURNING id
+      `;
+
+      return res.status(200).json({
+        success: true,
+        expiredCount: rows.length,
+      });
+    }
+
     const userId = String(req.query.userId ?? "").trim();
 
     if (!userId) {
@@ -21,7 +46,8 @@ export default async function handler(req: any, res: any) {
     }
 
     /**
-     * 掲載終了日を過ぎた公開求人を自動で非公開にする
+     * 求人管理画面を開いたときにも
+     * このユーザーの期限切れ求人を非公開にする
      */
     await sql`
       UPDATE jobs
