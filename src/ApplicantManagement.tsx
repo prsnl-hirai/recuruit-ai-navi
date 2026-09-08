@@ -247,6 +247,7 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          action: "save-memo",
           id: selectedApplication.id,
           userId,
           memo: memoDraft,

@@ -74,10 +74,10 @@ export default async function handler(req: any, res: any) {
     }
 
     // ========================================
-    // 応募情報更新（ステータス / 採用メモ）
+    // 応募情報更新
     // ========================================
     if (req.method === "PATCH") {
-      const { id, userId, status, memo } = req.body ?? {};
+      const { id, userId, status, memo, action } = req.body ?? {};
 
       const applicationId = Number(id);
       const ownerUserId = String(userId ?? "").trim();
@@ -96,102 +96,88 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      const hasStatus = status !== undefined;
-      const hasMemo = memo !== undefined;
+      // ----------------------------------------
+      // 採用メモ保存
+      // ----------------------------------------
+      if (action === "save-memo") {
+        const newMemo = String(memo ?? "");
 
-      if (!hasStatus && !hasMemo) {
-        return res.status(400).json({
-          success: false,
-          message: "更新する内容がありません。",
-        });
-      }
-
-      const newStatus = hasStatus ? String(status ?? "").trim() : null;
-      const newMemo = hasMemo ? String(memo ?? "") : null;
-
-      if (hasStatus) {
-        const allowedStatuses = ["0", "1", "2", "3", "4"];
-
-        if (!allowedStatuses.includes(newStatus!)) {
+        if (newMemo.length > 5000) {
           return res.status(400).json({
             success: false,
-            message: "応募ステータスが正しくありません。",
+            message: "採用メモは5000文字以内で入力してください。",
           });
         }
-      }
 
-      if (hasMemo && newMemo!.length > 5000) {
-        return res.status(400).json({
-          success: false,
-          message: "採用メモは5000文字以内で入力してください。",
+        const applications = await sql`
+          UPDATE applications AS a
+          SET memo = ${newMemo}
+          FROM jobs AS j
+          WHERE a.id = ${applicationId}
+            AND a.job_id = j.id
+            AND j.user_id = ${ownerUserId}
+            AND j.status <> '9'
+          RETURNING
+            a.id,
+            a.job_id,
+            a.name,
+            a.email,
+            a.phone,
+            a.message,
+            a.memo,
+            a.status,
+            a.source,
+            a.created_at
+        `;
+
+        if (applications.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "応募情報が見つかりませんでした。",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "採用メモを保存しました。",
+          application: applications[0],
         });
       }
 
-      const applications =
-        hasStatus && hasMemo
-          ? await sql`
-            UPDATE applications AS a
-            SET
-              status = ${newStatus},
-              memo = ${newMemo}
-            FROM jobs AS j
-            WHERE a.id = ${applicationId}
-              AND a.job_id = j.id
-              AND j.user_id = ${ownerUserId}
-              AND j.status <> '9'
-            RETURNING
-              a.id,
-              a.job_id,
-              a.name,
-              a.email,
-              a.phone,
-              a.message,
-              a.memo,
-              a.status,
-              a.source,
-              a.created_at
-          `
-          : hasStatus
-            ? await sql`
-              UPDATE applications AS a
-              SET status = ${newStatus}
-              FROM jobs AS j
-              WHERE a.id = ${applicationId}
-                AND a.job_id = j.id
-                AND j.user_id = ${ownerUserId}
-                AND j.status <> '9'
-              RETURNING
-                a.id,
-                a.job_id,
-                a.name,
-                a.email,
-                a.phone,
-                a.message,
-                a.memo,
-                a.status,
-                a.source,
-                a.created_at
-            `
-            : await sql`
-              UPDATE applications AS a
-              SET memo = ${newMemo}
-              FROM jobs AS j
-              WHERE a.id = ${applicationId}
-                AND a.job_id = j.id
-                AND j.user_id = ${ownerUserId}
-                AND j.status <> '9'
-              RETURNING
-                a.id,
-                a.job_id,
-                a.name,
-                a.email,
-                a.phone,
-                a.message,
-                a.memo,
-                a.status,
-                a.source,
-                a.created_at
-            `;
+      // ----------------------------------------
+      // 選考状況変更
+      // 既存の動作をそのまま維持
+      // ----------------------------------------
+      const newStatus = String(status ?? "").trim();
+      const allowedStatuses = ["0", "1", "2", "3", "4"];
+
+      if (!allowedStatuses.includes(newStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: "応募ステータスが正しくありません。",
+        });
+      }
+
+      const applications = await sql`
+        UPDATE applications AS a
+        SET status = ${newStatus}
+        FROM jobs AS j
+        WHERE a.id = ${applicationId}
+          AND a.job_id = j.id
+          AND j.user_id = ${ownerUserId}
+          AND j.status <> '9'
+        RETURNING
+          a.id,
+          a.job_id,
+          a.name,
+          a.email,
+          a.phone,
+          a.message,
+          a.memo,
+          a.status,
+          a.source,
+          a.created_at
+      `;
 
       if (applications.length === 0) {
         return res.status(404).json({
@@ -202,7 +188,7 @@ export default async function handler(req: any, res: any) {
 
       return res.status(200).json({
         success: true,
-        message: "応募情報を更新しました。",
+        message: "応募ステータスを更新しました。",
         application: applications[0],
       });
     }
