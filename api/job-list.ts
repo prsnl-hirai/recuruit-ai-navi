@@ -63,38 +63,51 @@ export default async function handler(req: any, res: any) {
 
     const rows = await sql`
       SELECT
-        id,
-        public_id,
-        status,
+        j.id,
+        j.public_id,
+        j.status,
 
-        title,
-        ai_title,
+        j.title,
+        j.ai_title,
 
-        company_name,
+        j.company_name,
 
-        employment_type,
-        ai_employment_type,
+        j.employment_type,
+        j.ai_employment_type,
 
-        salary,
-        ai_salary,
+        j.salary,
+        j.ai_salary,
 
-        postal_code,
-        prefecture,
-        city,
-        street_address,
-        building_name,
+        j.postal_code,
+        j.prefecture,
+        j.city,
+        j.street_address,
+        j.building_name,
 
-        valid_through,
+        j.valid_through,
 
-        created_at,
-        updated_at
+        j.created_at,
+        j.updated_at,
 
-      FROM jobs
+        (
+          SELECT COUNT(*)::int
+          FROM applications a
+          WHERE a.job_id = j.id
+        ) AS applicant_count,
 
-      WHERE user_id = ${userId}
-        AND status <> '9'
+        (
+          SELECT COUNT(*)::int
+          FROM applications a
+          WHERE a.job_id = j.id
+            AND COALESCE(a.status, '0') = '0'
+        ) AS unhandled_applicant_count
 
-      ORDER BY created_at DESC
+      FROM jobs j
+
+      WHERE j.user_id = ${userId}
+        AND j.status <> '9'
+
+      ORDER BY j.created_at DESC
     `;
 
     return res.status(200).json({

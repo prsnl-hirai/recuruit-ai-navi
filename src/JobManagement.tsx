@@ -24,6 +24,9 @@ type Job = {
 
   valid_through?: string | null;
 
+  applicant_count?: number;
+  unhandled_applicant_count?: number;
+
   created_at?: string;
   updated_at?: string;
 };
@@ -478,6 +481,51 @@ export default function JobManagement({
                 <div
                   style={{
                     display: "flex",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    marginTop: "14px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onViewApplicants(job.id)}
+                    style={{
+                      border: "none",
+                      borderRadius: "999px",
+                      padding: "7px 11px",
+                      background: "#f3f4f6",
+                      color: "#374151",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    👤 応募者 {Number(job.applicant_count ?? 0)}名
+                  </button>
+
+                  {Number(job.unhandled_applicant_count ?? 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onViewApplicants(job.id)}
+                      style={{
+                        border: "none",
+                        borderRadius: "999px",
+                        padding: "7px 11px",
+                        background: "#fee2e2",
+                        color: "#b91c1c",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      🔴 未対応 {Number(job.unhandled_applicant_count ?? 0)}名
+                    </button>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
                     gap: "8px",
                     marginTop: "16px",
                   }}
@@ -510,7 +558,7 @@ export default function JobManagement({
                       cursor: "pointer",
                     }}
                   >
-                    👤 応募者
+                    👤 応募者を見る
                   </button>
 
                   <label className="publish-switch">
@@ -530,12 +578,13 @@ export default function JobManagement({
                       {job.status === "1" ? "公開" : "非公開"}
                     </span>
                   </label>
-                  {job.status === "1" && job.public_id && (
-                    <button onClick={() => openPublicJob(job.public_id!)}>
-                      🌐 公開ページ
-                    </button>
-                  )}
                 </div>
+
+                {job.status === "1" && job.public_id && (
+                  <button onClick={() => openPublicJob(job.public_id!)}>
+                    🌐 公開ページ
+                  </button>
+                )}
               </article>
             );
           })}
