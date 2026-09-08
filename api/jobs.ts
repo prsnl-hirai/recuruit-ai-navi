@@ -397,24 +397,60 @@ export default async function handler(req: any, res: any) {
           if (!["0", "1"].includes(status)) {
             return res.status(400).json({
               success: false,
-              message: "公開状態が不正です",
+              message: "ステータスが不正です。",
             });
           }
 
+          // 公開する場合
+          if (status === "1") {
+            const checkRows = await sql`
+            SELECT
+             id,
+             valid_through
+            FROM jobs
+            WHERE id = ${id}
+              AND status <> '9'
+            LIMIT 1`;
+
+            if (checkRows.length === 0) {
+              return res.status(404).json({
+                success: false,
+                message: "求人が見つかりません。",
+              });
+            }
+
+            const job = checkRows[0];
+
+            if (job.valid_through) {
+              const todayRows = await sql`
+              SELECT
+               ${job.valid_through}::date < CURRENT_DATE AS expired`;
+
+              if (todayRows[0]?.expired) {
+                return res.status(400).json({
+                  success: false,
+                  code: "VALID_THROUGH_EXPIRED",
+                  message:
+                    "掲載終了日を過ぎているため公開できません。掲載終了日を本日以降の日付に変更してください。",
+                });
+              }
+            }
+          }
+
           const rows = await sql`
-        UPDATE jobs
-        SET
-          status = ${status},
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${id}
-          AND status <> '9'
-        RETURNING *
-      `;
+          UPDATE jobs
+          SET
+            status = ${status},
+           updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${id}
+            AND status <> '9'
+          RETURNING *
+          `;
 
           if (rows.length === 0) {
             return res.status(404).json({
               success: false,
-              message: "求人が見つかりません",
+              message: "求人が見つかりません。",
             });
           }
 
@@ -423,7 +459,6 @@ export default async function handler(req: any, res: any) {
             job: rows[0],
           });
         }
-
         // ========================================
         // 通常の求人編集
         // ========================================

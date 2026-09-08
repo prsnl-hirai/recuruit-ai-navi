@@ -1323,6 +1323,12 @@ textarea {
   color: #111;
 }
 
+input[type="date"] {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
 /* ========================================
    戻るボタン
 ======================================== */

@@ -465,6 +465,19 @@ const formatText = (text: string | undefined) => {
 };
 
 /* ========================================
+   掲載終了日チェック
+======================================== */
+const getTodayString = () => {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+/* ========================================
    App
 ======================================== */
 
@@ -927,6 +940,24 @@ function App() {
   const handleSaveJob = async (status: "0" | "1" = "0") => {
     if (!result) {
       setErrorMessage("保存する求人情報がありません。");
+      return;
+    }
+
+    // 公開時のみ掲載終了日をチェック
+    if (
+      status === "1" &&
+      form.validThrough &&
+      form.validThrough < getTodayString()
+    ) {
+      setErrorMessage(
+        "掲載終了日を過ぎているため、この求人は公開できません。掲載終了日を本日以降の日付に変更してください。",
+      );
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
       return;
     }
 
@@ -2392,15 +2423,28 @@ function App() {
 
             <input
               type="date"
+              min={getTodayString()}
               value={form.validThrough}
-              onChange={(e) =>
+              onChange={(e) => {
+                const value = e.target.value;
+
+                if (value && value < getTodayString()) {
+                  setErrorMessage(
+                    "掲載終了日は本日以降の日付を指定してください。",
+                  );
+                  return;
+                }
+
+                setErrorMessage("");
+
                 setForm((prev) => ({
                   ...prev,
-                  validThrough: e.target.value,
-                }))
-              }
+                  validThrough: value,
+                }));
+              }}
             />
 
+            <p className="help-text">本日以降の日付を指定してください。</p>
             <p className="help-text">指定した日まで求人を掲載します。</p>
           </div>
         </section>
