@@ -3,6 +3,8 @@ import liff from "@line/liff";
 import "./App.css";
 import PublishOptions from "./PublishOptions";
 import JobManagement from "./JobManagement";
+import CompanyPage from "./CompanyPage";
+import PrivacyPage from "./PrivacyPage";
 
 type WorkType = "固定時間" | "シフト制";
 type SalaryType = "時給" | "日給" | "月給" | "年俸";
@@ -514,6 +516,16 @@ function App() {
       setCurrentPage("create");
     }
   }, []);
+
+  const pathname = window.location.pathname;
+
+  if (pathname === "/company") {
+    return <CompanyPage />;
+  }
+
+  if (pathname === "/privacy") {
+    return <PrivacyPage />;
+  }
 
   /* ========================================
      LIFF
