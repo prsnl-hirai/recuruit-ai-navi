@@ -1440,6 +1440,8 @@ ${company}
             style={{
               width: "100%",
               maxWidth: "520px",
+              minWidth: 0,
+              boxSizing: "border-box",
               maxHeight: "80vh",
               overflowY: "auto",
               padding: "22px",
@@ -1545,6 +1547,11 @@ ${company}
               {String(selectedApplication.status ?? "0") === "2" && (
                 <div
                   style={{
+                    width: "100%",
+                    minWidth: 0,
+                    maxWidth: "100%",
+                    boxSizing: "border-box",
+                    overflow: "hidden",
                     padding: "14px",
                     border: "1px solid #bfdbfe",
                     borderRadius: "10px",
@@ -1568,6 +1575,9 @@ ${company}
                         display: "block",
                         width: "100%",
                         minWidth: 0,
+                        maxWidth: "100%",
+                        overflow: "hidden",
+                        boxSizing: "border-box",
                         fontSize: "13px",
                         fontWeight: 700,
                       }}
@@ -1578,16 +1588,20 @@ ${company}
                         value={interviewDate}
                         onChange={(e) => setInterviewDate(e.target.value)}
                         style={{
+                          display: "block",
                           width: "100%",
-                          maxWidth: "100%",
                           minWidth: 0,
+                          maxWidth: "100%",
                           boxSizing: "border-box",
                           marginTop: "6px",
                           padding: "10px",
                           border: "1px solid #d1d5db",
                           borderRadius: "8px",
                           background: "#fff",
-                          font: "inherit",
+                          fontSize: "16px",
+                          lineHeight: 1.2,
+                          WebkitAppearance: "none",
+                          appearance: "none",
                         }}
                       />
                     </label>
@@ -1597,6 +1611,9 @@ ${company}
                         display: "block",
                         width: "100%",
                         minWidth: 0,
+                        maxWidth: "100%",
+                        overflow: "hidden",
+                        boxSizing: "border-box",
                         fontSize: "13px",
                         fontWeight: 700,
                       }}
@@ -1607,16 +1624,20 @@ ${company}
                         value={interviewTime}
                         onChange={(e) => setInterviewTime(e.target.value)}
                         style={{
+                          display: "block",
                           width: "100%",
-                          maxWidth: "100%",
                           minWidth: 0,
+                          maxWidth: "100%",
                           boxSizing: "border-box",
                           marginTop: "6px",
                           padding: "10px",
                           border: "1px solid #d1d5db",
                           borderRadius: "8px",
                           background: "#fff",
-                          font: "inherit",
+                          fontSize: "16px",
+                          lineHeight: 1.2,
+                          WebkitAppearance: "none",
+                          appearance: "none",
                         }}
                       />
                     </label>
@@ -1725,7 +1746,7 @@ ${company}
                       onChange={(e) => setInterviewMemo(e.target.value)}
                       maxLength={5000}
                       rows={4}
-                      placeholder="例：履歴書持参"
+                      placeholder="例：履歴書持参、担当：平井"
                       style={{
                         width: "100%",
                         boxSizing: "border-box",
