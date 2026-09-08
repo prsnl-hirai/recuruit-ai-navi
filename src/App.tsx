@@ -2423,6 +2423,7 @@ function App() {
 
             <input
               type="date"
+              className="valid-through-input"
               min={getTodayString()}
               value={form.validThrough}
               onChange={(e) => {

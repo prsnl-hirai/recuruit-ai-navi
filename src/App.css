@@ -1323,12 +1323,6 @@ textarea {
   color: #111;
 }
 
-input[type="date"] {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  min-width: 0;
-}
 /* ========================================
    戻るボタン
 ======================================== */
@@ -1352,4 +1346,22 @@ input[type="date"] {
 
 .back-to-jobs-button:hover {
   color: #111;
+}
+
+/* ========================================
+   掲載終了日
+======================================== */
+.form-group .valid-through-input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* iPhone / Safari の date input 対策 */
+.valid-through-input::-webkit-date-and-time-value {
+  text-align: left;
 }
