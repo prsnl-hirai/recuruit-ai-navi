@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { neon } from "@neondatabase/serverless";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -6,6 +7,7 @@ const openai = new OpenAI({
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
     return res.status(405).json({
       success: false,
       message: "Method Not Allowed",
@@ -13,17 +15,109 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    console.log("========================================");
-    console.log("仕事内容候補生成");
-    console.log("========================================");
+    const action = String(req.body?.action ?? "");
 
-    console.log("受信データ:", req.body);
+    // =========================================================
+    // 助成金診断マスタ取得
+    // 既存の /api/job-options を利用するため、新しいFunctionは増やしません。
+    // =========================================================
+    if (action === "subsidy-master") {
+      if (!process.env.DATABASE_URL) {
+        throw new Error("DATABASE_URLが設定されていません");
+      }
 
-    const { industry, jobTitle } = req.body;
+      const sql = neon(process.env.DATABASE_URL);
+      const fiscalYear = Number(req.body?.fiscalYear ?? 2026);
 
-    /* =========================
-       入力チェック
-    ========================= */
+      if (
+        !Number.isInteger(fiscalYear) ||
+        fiscalYear < 2000 ||
+        fiscalYear > 2100
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "年度が正しくありません",
+        });
+      }
+
+      const questions = await sql`
+        SELECT
+          id,
+          question_key,
+          question_text,
+          question_type,
+          industry,
+          options,
+          sort_order
+        FROM subsidy_questions
+        WHERE active = TRUE
+        ORDER BY sort_order, id
+      `;
+
+      const subsidies = await sql`
+        SELECT
+          id,
+          code,
+          name,
+          course_name,
+          fiscal_year,
+          category,
+          description,
+          official_url,
+          application_authority,
+          valid_from,
+          valid_to
+        FROM subsidies
+        WHERE fiscal_year = ${fiscalYear}
+          AND active = TRUE
+          AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+          AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+        ORDER BY name, course_name, id
+      `;
+
+      const subsidyIds = subsidies.map((item: any) => Number(item.id));
+
+      let conditions: any[] = [];
+      if (subsidyIds.length > 0) {
+        // Neonの配列展開に依存せず、年度でJOINして取得します。
+        conditions = await sql`
+          SELECT
+            c.id,
+            c.subsidy_id,
+            c.condition_key,
+            c.operator,
+            c.condition_value,
+            c.weight,
+            c.required,
+            c.sort_order
+          FROM subsidy_conditions c
+          INNER JOIN subsidies s
+            ON s.id = c.subsidy_id
+          WHERE s.fiscal_year = ${fiscalYear}
+            AND s.active = TRUE
+            AND (s.valid_from IS NULL OR s.valid_from <= CURRENT_DATE)
+            AND (s.valid_to IS NULL OR s.valid_to >= CURRENT_DATE)
+          ORDER BY c.subsidy_id, c.sort_order, c.id
+        `;
+      }
+
+      return res.status(200).json({
+        success: true,
+        fiscalYear,
+        questions,
+        subsidies,
+        conditions,
+      });
+    }
+
+    // =========================================================
+    // 従来の仕事内容候補生成
+    // =========================================================
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEYが設定されていません");
+    }
+
+    const { industry, jobTitle } = req.body ?? {};
 
     if (!industry) {
       return res.status(400).json({
@@ -35,19 +129,14 @@ export default async function handler(req: any, res: any) {
     if (!jobTitle) {
       return res.status(400).json({
         success: false,
-        message: "職種を入力してください",
+        message: "職種を選択してください",
       });
     }
-
-    /* =========================
-       AIプロンプト
-    ========================= */
 
     const prompt = `
 あなたは求人作成サービス「求人AIナビ」のアシスタントです。
 
-以下の業種・職種から、
-その仕事で一般的に行われる仕事内容を考えてください。
+以下の業種・職種から、その仕事で一般的に行われる仕事内容を考えてください。
 
 【業種】
 ${industry}
@@ -56,8 +145,7 @@ ${industry}
 ${jobTitle}
 
 応募者が仕事内容をイメージしやすいように、
-実際の求人でよく使われる仕事内容を
-6～8個程度作成してください。
+実際の求人でよく使われる仕事内容を候補として8個程度作成してください。
 
 【ルール】
 
@@ -88,29 +176,21 @@ ${jobTitle}
 JSON以外の文章は絶対に出力しないでください。
 `;
 
-    /* =========================
-       OpenAI API
-    ========================= */
+    console.log("仕事内容候補生成", { industry, jobTitle });
 
     const response = await openai.responses.create({
-      model: "gpt-5-mini",
+      model: "gpt-5.6-luna",
       input: prompt,
     });
 
     const output = response.output_text;
 
-    console.log("仕事内容候補AI response:", output);
-
-    /* =========================
-       JSON解析
-    ========================= */
-
-    let parsed: any;
+    let parsed;
 
     try {
       parsed = JSON.parse(output);
-    } catch {
-      console.log("JSON直接解析失敗。JSON部分を抽出します。");
+    } catch (error) {
+      console.error("JSON parse error:", error);
 
       const jsonMatch = output.match(/\{[\s\S]*\}/);
 
@@ -118,48 +198,26 @@ JSON以外の文章は絶対に出力しないでください。
         throw new Error("AIから正しいJSONが返されませんでした");
       }
 
-      try {
-        parsed = JSON.parse(jsonMatch[0]);
-      } catch (jsonError) {
-        console.error("JSON解析エラー:", jsonError);
-
-        throw new Error("AIの回答をJSONとして解析できませんでした");
-      }
+      parsed = JSON.parse(jsonMatch[0]);
     }
 
-    /* =========================
-       候補を安全に整形
-    ========================= */
-
-    const options = Array.isArray(parsed?.options)
+    const options = Array.isArray(parsed.options)
       ? parsed.options.filter(
-          (item: unknown) => typeof item === "string" && item.trim() !== ""
+          (item: unknown): item is string =>
+            typeof item === "string" && item.trim() !== "",
         )
       : [];
-
-    if (options.length === 0) {
-      throw new Error("仕事内容候補を生成できませんでした");
-    }
-
-    /* =========================
-       レスポンス
-    ========================= */
 
     return res.status(200).json({
       success: true,
       options,
     });
-  } catch (error) {
-    console.error("仕事内容候補生成エラー:", error);
-
-    const message =
-      error instanceof Error
-        ? error.message
-        : "仕事内容候補の生成に失敗しました";
+  } catch (error: any) {
+    console.error("job-options error:", error);
 
     return res.status(500).json({
       success: false,
-      message,
+      message: error?.message || "処理に失敗しました",
     });
   }
 }

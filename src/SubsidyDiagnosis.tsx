@@ -1,110 +1,140 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-type YesNo = "" | "yes" | "no";
+type AnswerValue = string | string[];
+type Answers = Record<string, AnswerValue>;
 
-type FormState = {
-  industry: string;
-  employeeCount: string;
-  capital: string;
-  hasEmployees: YesNo;
-  plansHiring: YesNo;
-  hasNonRegular: YesNo;
-  plansRegularization: YesNo;
-  plansTraining: YesNo;
-  plansWageIncrease: YesNo;
-  plansWorkplaceImprovement: YesNo;
-  plansChildcareSupport: YesNo;
-  plansTelework: YesNo;
-  plansForeignWorkerSupport: YesNo;
-  plansTrialHiring: YesNo;
-  targetHiring: string[];
-  constructionYoungWomen: YesNo;
-  constructionTraining: YesNo;
-  constructionCCUS: YesNo;
+type Question = {
+  id: number;
+  question_key: string;
+  question_text: string;
+  question_type: "single" | "multi" | "number" | "yes_no_unknown" | string;
+  industry: string | null;
+  options: string[] | null;
+  sort_order: number;
+};
+
+type Subsidy = {
+  id: number;
+  code: string;
+  name: string;
+  course_name: string | null;
+  fiscal_year: number;
+  category: string | null;
+  description: string | null;
+  official_url: string | null;
+  application_authority: string | null;
+  valid_from: string | null;
+  valid_to: string | null;
+};
+
+type Condition = {
+  id: number;
+  subsidy_id: number;
+  condition_key: string;
+  operator: string;
+  condition_value: string | null;
+  weight: number;
+  required: boolean;
+  sort_order: number;
 };
 
 type Candidate = {
-  id: string;
-  name: string;
-  course?: string;
+  subsidy: Subsidy;
   score: number;
+  matchLevel: "high" | "medium" | "low";
   reasons: string[];
   checks: string[];
-  officialUrl: string;
 };
 
-const initialForm: FormState = {
-  industry: "",
-  employeeCount: "",
-  capital: "",
-  hasEmployees: "",
-  plansHiring: "",
-  hasNonRegular: "",
-  plansRegularization: "",
-  plansTraining: "",
-  plansWageIncrease: "",
-  plansWorkplaceImprovement: "",
-  plansChildcareSupport: "",
-  plansTelework: "",
-  plansForeignWorkerSupport: "",
-  plansTrialHiring: "",
-  targetHiring: [],
-  constructionYoungWomen: "",
-  constructionTraining: "",
-  constructionCCUS: "",
+type MasterResponse = {
+  success: boolean;
+  fiscalYear?: number;
+  questions?: Question[];
+  subsidies?: Subsidy[];
+  conditions?: Condition[];
+  message?: string;
 };
 
-const industries = [
-  "飲食店",
-  "美容",
-  "小売",
-  "ホテル・宿泊",
-  "介護",
-  "医療",
-  "建設",
-  "IT",
-  "製造",
-  "運輸",
-  "その他",
-];
+const FISCAL_YEAR = 2026;
 
-const employeeCounts = [
-  "0人",
-  "1〜5人",
-  "6〜20人",
-  "21〜50人",
-  "51〜100人",
-  "101〜300人",
-  "301人以上",
-];
-const capitals = [
-  "個人事業主",
-  "1,000万円以下",
-  "5,000万円以下",
-  "1億円以下",
-  "3億円以下",
-  "3億円超",
-  "わからない",
-];
+function normalizeOptions(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string");
+  }
 
-const targetOptions = [
-  "高齢者",
-  "障害者",
-  "ひとり親",
-  "就職が困難な方",
-  "35歳未満の若年者",
-  "女性",
-];
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed)
+        ? parsed.filter((item): item is string => typeof item === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  }
 
-const official = {
-  all: "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/index_00057.html",
-  target:
-    "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/index_00058.html",
-  action:
-    "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kyufukin/index_00059.html",
-  construction:
-    "https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/koyou/kensetsu-kouwan/kensetsu-kaizen.html",
-};
+  return [];
+}
+
+function parseConditionArray(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function conditionMatches(
+  condition: Condition,
+  answer: AnswerValue | undefined,
+): boolean {
+  const expected = condition.condition_value ?? "";
+
+  switch (condition.operator) {
+    case "eq":
+      return typeof answer === "string" && answer === expected;
+
+    case "neq":
+      return typeof answer === "string" && answer !== expected;
+
+    case "in":
+      return (
+        typeof answer === "string" &&
+        parseConditionArray(expected).includes(answer)
+      );
+
+    case "contains":
+      return Array.isArray(answer) && answer.includes(expected);
+
+    case "contains_any": {
+      if (!Array.isArray(answer)) return false;
+      const expectedValues = parseConditionArray(expected);
+      return expectedValues.some((item) => answer.includes(item));
+    }
+
+    case "gte":
+      return Number(answer) >= Number(expected);
+
+    case "lte":
+      return Number(answer) <= Number(expected);
+
+    case "gt":
+      return Number(answer) > Number(expected);
+
+    case "lt":
+      return Number(answer) < Number(expected);
+
+    default:
+      return false;
+  }
+}
+
+function displayAnswer(answer: AnswerValue | undefined): string {
+  if (Array.isArray(answer)) return answer.join("、");
+  return answer || "";
+}
 
 function OptionButton({
   selected,
@@ -135,7 +165,7 @@ function OptionButton({
   );
 }
 
-function Question({
+function QuestionCard({
   title,
   children,
   required,
@@ -178,309 +208,349 @@ function Question({
   );
 }
 
-function yesNoButtons(value: YesNo, onChange: (value: YesNo) => void) {
-  return (
-    <>
-      <OptionButton selected={value === "yes"} onClick={() => onChange("yes")}>
-        はい
-      </OptionButton>
-      <OptionButton selected={value === "no"} onClick={() => onChange("no")}>
-        いいえ
-      </OptionButton>
-    </>
-  );
-}
-
 export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
-  const [form, setForm] = useState<FormState>(initialForm);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [subsidies, setSubsidies] = useState<Subsidy[]>([]);
+  const [conditions, setConditions] = useState<Condition[]>([]);
+  const [answers, setAnswers] = useState<Answers>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [showResult, setShowResult] = useState(false);
 
-  const setValue = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+  useEffect(() => {
+    const loadMaster = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await fetch("/api/job-options", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "subsidy-master",
+            fiscalYear: FISCAL_YEAR,
+          }),
+        });
+
+        const data: MasterResponse = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.message || "助成金診断データを取得できませんでした",
+          );
+        }
+
+        setQuestions(
+          (data.questions ?? []).map((item) => ({
+            ...item,
+            id: Number(item.id),
+            sort_order: Number(item.sort_order ?? 0),
+            options: normalizeOptions(item.options),
+          })),
+        );
+        setSubsidies(
+          (data.subsidies ?? []).map((item) => ({
+            ...item,
+            id: Number(item.id),
+            fiscal_year: Number(item.fiscal_year),
+          })),
+        );
+        setConditions(
+          (data.conditions ?? []).map((item) => ({
+            ...item,
+            id: Number(item.id),
+            subsidy_id: Number(item.subsidy_id),
+            weight: Number(item.weight ?? 0),
+            required: Boolean(item.required),
+            sort_order: Number(item.sort_order ?? 0),
+          })),
+        );
+      } catch (e: any) {
+        console.error(e);
+        setError(e?.message || "助成金診断データを取得できませんでした");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMaster();
+  }, []);
+
+  const setAnswer = (key: string, value: AnswerValue) => {
     setShowResult(false);
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setAnswers((prev) => ({ ...prev, [key]: value }));
   };
 
-  const toggleTarget = (value: string) => {
+  const toggleMulti = (key: string, value: string) => {
     setShowResult(false);
-    setForm((prev) => ({
-      ...prev,
-      targetHiring: prev.targetHiring.includes(value)
-        ? prev.targetHiring.filter((item) => item !== value)
-        : [...prev.targetHiring, value],
-    }));
+    setAnswers((prev) => {
+      const current = Array.isArray(prev[key]) ? (prev[key] as string[]) : [];
+      const exclusiveValues = ["該当なし", "わからない"];
+
+      if (exclusiveValues.includes(value)) {
+        return {
+          ...prev,
+          [key]: current.includes(value) ? [] : [value],
+        };
+      }
+
+      const withoutExclusive = current.filter(
+        (item) => !exclusiveValues.includes(item),
+      );
+      return {
+        ...prev,
+        [key]: withoutExclusive.includes(value)
+          ? withoutExclusive.filter((item) => item !== value)
+          : [...withoutExclusive, value],
+      };
+    });
   };
+
+  const questionMap = useMemo(
+    () =>
+      new Map(questions.map((question) => [question.question_key, question])),
+    [questions],
+  );
+
+  const selectedIndustry =
+    typeof answers.industry === "string" ? answers.industry : "";
+
+  const shouldShowQuestion = (question: Question) => {
+    if (question.industry && question.industry !== selectedIndustry)
+      return false;
+
+    const key = question.question_key;
+
+    if (["plans_trial_hiring", "target_hiring"].includes(key)) {
+      return answers.plans_hiring === "はい";
+    }
+
+    if (
+      [
+        "plans_regularization",
+        "plans_wage_increase",
+        "plans_common_wage_rules",
+        "plans_bonus_retirement",
+        "plans_social_insurance_support",
+        "plans_worktime_extension",
+      ].includes(key)
+    ) {
+      return answers.has_non_regular === "はい";
+    }
+
+    if (["plans_digital_training", "plans_reskilling"].includes(key)) {
+      return (
+        answers.plans_training === "はい" || answers.plans_training === "検討中"
+      );
+    }
+
+    return true;
+  };
+
+  const visibleQuestions = useMemo(
+    () => questions.filter(shouldShowQuestion),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [questions, answers, selectedIndustry],
+  );
+
+  // 最初の診断を開始するための最低限の必須項目。
+  // 詳細制度の質問は未回答でも候補抽出できます。
+  const requiredKeys = [
+    "industry",
+    "employee_count",
+    "capital",
+    "has_employees",
+    "plans_hiring",
+  ];
+  const canDiagnose = requiredKeys.every((key) => {
+    const value = answers[key];
+    return Array.isArray(value)
+      ? value.length > 0
+      : String(value ?? "").trim() !== "";
+  });
 
   const candidates = useMemo<Candidate[]>(() => {
     const list: Candidate[] = [];
 
-    const push = (candidate: Candidate) => {
-      if (candidate.score >= 35) {
-        list.push({ ...candidate, score: Math.min(candidate.score, 95) });
-      }
-    };
-
-    let score = 20;
-    const reasons: string[] = [];
-    const checks: string[] = [
-      "対象労働者・事業主の要件",
-      "雇用保険の適用状況",
-      "申請前後の手続期限",
-    ];
-    if (form.hasNonRegular === "yes") {
-      score += 25;
-      reasons.push("非正規雇用の従業員がいる");
-    }
-    if (form.plansRegularization === "yes") {
-      score += 40;
-      reasons.push("正社員化を予定している");
-    }
-    if (form.plansWageIncrease === "yes") {
-      score += 15;
-      reasons.push("賃金改善を予定している");
-    }
-    push({
-      id: "career-up",
-      name: "キャリアアップ助成金",
-      course: "正社員化・処遇改善に関するコース等",
-      score,
-      reasons,
-      checks: [...checks, "就業規則・転換制度", "転換前後の賃金・雇用条件"],
-      officialUrl: official.all,
-    });
-
-    score = 15;
-    const trialReasons: string[] = [];
-    if (form.plansHiring === "yes") {
-      score += 30;
-      trialReasons.push("新規採用を予定している");
-    }
-    if (form.plansTrialHiring === "yes") {
-      score += 45;
-      trialReasons.push("トライアル雇用を検討している");
-    }
-    if (
-      form.industry === "建設" &&
-      (form.targetHiring.includes("35歳未満の若年者") ||
-        form.targetHiring.includes("女性"))
-    ) {
-      score += 10;
-      trialReasons.push("建設分野で若年者・女性の採用を検討している");
-    }
-    push({
-      id: "trial",
-      name: "トライアル雇用助成金",
-      course:
-        form.industry === "建設"
-          ? "一般トライアル／若年・女性建設労働者トライアル等"
-          : "一般トライアルコース等",
-      score,
-      reasons: trialReasons,
-      checks: [
-        "対象となる求職者の要件",
-        "ハローワーク等の紹介要件",
-        "試行雇用期間・実施計画",
-      ],
-      officialUrl: official.all,
-    });
-
-    score = 15;
-    const targetReasons: string[] = [];
-    if (form.plansHiring === "yes") {
-      score += 20;
-      targetReasons.push("採用予定がある");
-    }
-    if (
-      form.targetHiring.some((x) =>
-        ["高齢者", "障害者", "ひとり親", "就職が困難な方"].includes(x),
-      )
-    ) {
-      score += 55;
-      targetReasons.push("対象となり得る求職者層の採用を検討している");
-    }
-    push({
-      id: "special-hire",
-      name: "特定求職者雇用開発助成金",
-      score,
-      reasons: targetReasons,
-      checks: ["対象労働者の区分", "職業紹介経路", "継続雇用の見込み"],
-      officialUrl: official.target,
-    });
-
-    score = 15;
-    const trainingReasons: string[] = [];
-    if (form.hasEmployees === "yes") {
-      score += 15;
-      trainingReasons.push("従業員を雇用している");
-    }
-    if (form.plansTraining === "yes") {
-      score += 60;
-      trainingReasons.push("従業員への研修・訓練を予定している");
-    }
-    if (form.industry === "IT") {
-      score += 10;
-      trainingReasons.push(
-        "IT・デジタル人材育成と相性のあるコースを確認できる",
+    for (const subsidy of subsidies) {
+      const subsidyConditions = conditions.filter(
+        (condition) => condition.subsidy_id === subsidy.id,
       );
-    }
-    if (form.industry === "建設" && form.constructionTraining === "yes") {
-      score += 15;
-      trainingReasons.push("建設労働者への技能実習・訓練を予定している");
-    }
-    push({
-      id: "human-dev",
-      name: "人材開発支援助成金",
-      course:
-        form.industry === "建設"
-          ? "人材育成支援／建設労働者技能実習・認定訓練等"
-          : form.industry === "IT"
-            ? "人材育成支援／人への投資促進／リスキリング等"
-            : "人材育成支援／人への投資促進／リスキリング等",
-      score,
-      reasons: trainingReasons,
-      checks: [
-        "訓練内容・時間数",
-        "訓練開始前の計画届等",
-        "対象経費・賃金助成の要件",
-      ],
-      officialUrl:
-        form.industry === "建設" ? official.construction : official.all,
-    });
+      if (subsidyConditions.length === 0) continue;
 
-    score = 15;
-    const retentionReasons: string[] = [];
-    if (form.plansWorkplaceImprovement === "yes") {
-      score += 50;
-      retentionReasons.push("雇用管理・職場環境の改善を予定している");
-    }
-    if (form.plansForeignWorkerSupport === "yes") {
-      score += 35;
-      retentionReasons.push("外国人労働者の就労環境整備を予定している");
-    }
-    if (form.plansTelework === "yes") {
-      score += 30;
-      retentionReasons.push("テレワーク導入・改善を予定している");
-    }
-    push({
-      id: "retention",
-      name: "人材確保等支援助成金",
-      course:
-        "雇用管理制度・雇用環境整備／外国人労働者就労環境整備／テレワーク等",
-      score,
-      reasons: retentionReasons,
-      checks: [
-        "対象となる制度・設備",
-        "計画認定・実施期間",
-        "離職率等の要件があるコースの確認",
-      ],
-      officialUrl: official.action,
-    });
+      const requiredConditions = subsidyConditions.filter(
+        (condition) => condition.required,
+      );
+      const requiredMatched = requiredConditions.every((condition) =>
+        conditionMatches(condition, answers[condition.condition_key]),
+      );
 
-    score = 15;
-    const familyReasons: string[] = [];
-    if (form.plansChildcareSupport === "yes") {
-      score += 70;
-      familyReasons.push("育児・介護等と仕事の両立支援を予定している");
-    }
-    push({
-      id: "family",
-      name: "両立支援等助成金",
-      score,
-      reasons: familyReasons,
-      checks: [
-        "就業規則・両立支援制度",
-        "対象労働者の取得・復帰状況",
-        "コースごとの実施要件",
-      ],
-      officialUrl: official.all,
-    });
+      if (!requiredMatched) continue;
 
-    score = 10;
-    const seniorReasons: string[] = [];
-    if (form.targetHiring.includes("高齢者")) {
-      score += 45;
-      seniorReasons.push("高齢者の採用を検討している");
-    }
-    if (form.plansWorkplaceImprovement === "yes") {
-      score += 20;
-      seniorReasons.push("継続雇用・雇用管理の改善を検討している");
-    }
-    push({
-      id: "senior",
-      name: "65歳超雇用推進助成金",
-      score,
-      reasons: seniorReasons,
-      checks: [
-        "定年・継続雇用制度",
-        "対象労働者の雇用状況",
-        "コース別の年齢・制度要件",
-      ],
-      officialUrl: official.all,
-    });
+      const totalWeight = subsidyConditions.reduce(
+        (sum, condition) => sum + Math.max(condition.weight, 0),
+        0,
+      );
+      const matched = subsidyConditions.filter((condition) =>
+        conditionMatches(condition, answers[condition.condition_key]),
+      );
+      const matchedWeight = matched.reduce(
+        (sum, condition) => sum + Math.max(condition.weight, 0),
+        0,
+      );
+      const score =
+        totalWeight > 0 ? Math.round((matchedWeight / totalWeight) * 100) : 100;
 
-    if (form.industry === "建設") {
-      score = 20;
-      const constructionReasons: string[] = ["業種が建設業"];
-      if (form.constructionYoungWomen === "yes") {
-        score += 55;
-        constructionReasons.push("若年者・女性の入職・定着施策を予定している");
-      }
-      if (
-        form.targetHiring.includes("35歳未満の若年者") ||
-        form.targetHiring.includes("女性")
-      ) {
-        score += 15;
-        constructionReasons.push("若年者・女性の採用を検討している");
-      }
-      push({
-        id: "construction-attract",
-        name: "人材確保等支援助成金",
-        course: "若年者及び女性に魅力ある職場づくり事業コース（建設分野）",
-        score,
-        reasons: constructionReasons,
-        checks: [
-          "建設事業主等の対象要件",
-          "対象となる取組内容",
-          "実施計画・申請時期",
-        ],
-        officialUrl: official.construction,
+      const reasons = matched.map((condition) => {
+        const question = questionMap.get(condition.condition_key);
+        const answer = displayAnswer(answers[condition.condition_key]);
+        return question
+          ? `${question.question_text} → ${answer}`
+          : `${condition.condition_key} → ${answer}`;
       });
 
-      score = 20;
-      const ccusReasons: string[] = ["業種が建設業"];
-      if (form.constructionCCUS === "yes") {
-        score += 65;
-        ccusReasons.push("CCUSを活用した雇用管理改善を予定している");
+      const checks: string[] = [
+        "対象となる事業主・労働者の詳細要件",
+        "雇用保険など共通支給要件",
+        "計画提出・申請期限などの手続要件",
+      ];
+
+      if (subsidy.application_authority) {
+        checks.push(`申請窓口：${subsidy.application_authority}`);
       }
-      push({
-        id: "construction-ccus",
-        name: "人材確保等支援助成金",
-        course: "建設キャリアアップシステム等活用促進コース",
+
+      const matchLevel: Candidate["matchLevel"] =
+        score >= 80 ? "high" : score >= 55 ? "medium" : "low";
+
+      list.push({
+        subsidy,
         score,
-        reasons: ccusReasons,
-        checks: [
-          "中小建設事業主等の対象区分",
-          "CCUS活用内容",
-          "助成対象経費・取組期間",
-        ],
-        officialUrl: official.construction,
+        matchLevel,
+        reasons,
+        checks,
       });
     }
 
-    return list.sort((a, b) => b.score - a.score).slice(0, 6);
-  }, [form]);
-
-  const canDiagnose =
-    !!form.industry &&
-    !!form.employeeCount &&
-    !!form.capital &&
-    !!form.hasEmployees &&
-    !!form.plansHiring;
+    return list
+      .sort((a, b) => b.score - a.score || a.subsidy.id - b.subsidy.id)
+      .slice(0, 8);
+  }, [subsidies, conditions, answers, questionMap]);
 
   const reset = () => {
-    setForm(initialForm);
+    setAnswers({});
     setShowResult(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const renderQuestion = (question: Question) => {
+    const value = answers[question.question_key];
+    const options = question.options ?? [];
+
+    if (question.question_type === "number") {
+      return (
+        <input
+          type="number"
+          min="0"
+          inputMode="numeric"
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => setAnswer(question.question_key, e.target.value)}
+          placeholder={
+            question.question_key === "capital" ? "例：10000000" : "例：10"
+          }
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            padding: "11px 12px",
+            border: "1px solid #d1d5db",
+            borderRadius: "10px",
+            fontSize: "16px",
+          }}
+        />
+      );
+    }
+
+    if (question.question_type === "multi") {
+      const selected = Array.isArray(value) ? value : [];
+      return (
+        <>
+          {options.map((option) => (
+            <OptionButton
+              key={option}
+              selected={selected.includes(option)}
+              onClick={() => toggleMulti(question.question_key, option)}
+            >
+              {option}
+            </OptionButton>
+          ))}
+        </>
+      );
+    }
+
+    return (
+      <>
+        {options.map((option) => (
+          <OptionButton
+            key={option}
+            selected={value === option}
+            onClick={() => setAnswer(question.question_key, option)}
+          >
+            {option}
+          </OptionButton>
+        ))}
+      </>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#f6f7f9",
+          padding: "40px 16px",
+          textAlign: "center",
+        }}
+      >
+        助成金診断を読み込んでいます...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#f6f7f9",
+          padding: "24px 12px",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "700px",
+            margin: "0 auto",
+            background: "#fff",
+            padding: "20px",
+            borderRadius: "12px",
+          }}
+        >
+          <div style={{ color: "#dc2626", fontWeight: 800 }}>
+            助成金診断データを取得できませんでした
+          </div>
+          <div style={{ marginTop: "8px", color: "#4b5563", fontSize: "13px" }}>
+            {error}
+          </div>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{ marginTop: "16px", padding: "10px 14px" }}
+          >
+            再読み込み
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (showResult) {
     return (
@@ -525,7 +595,7 @@ export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
               <div
                 style={{ marginTop: "2px", color: "#6b7280", fontSize: "11px" }}
               >
-                利用できる可能性がある制度を表示しています
+                令和8年度（2026年度）の登録済み制度から候補を表示しています
               </div>
             </div>
           </div>
@@ -550,7 +620,7 @@ export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
               lineHeight: 1.7,
             }}
           >
-            この結果は簡易診断です。「利用可能性」は支給を保証するものではありません。申請前に必ず最新の厚生労働省資料・支給要領・申請窓口で確認してください。
+            この結果は簡易診断です。「条件一致度」は受給確率や支給決定を示すものではありません。制度の詳細要件・申請時期・最新情報を必ず公式資料や専門家に確認してください。
           </div>
 
           {candidates.length === 0 ? (
@@ -562,14 +632,14 @@ export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
                 textAlign: "center",
               }}
             >
-              現在の回答では、候補を絞り込めませんでした。
+              現在の回答では候補を絞り込めませんでした。
               <br />
               回答内容を変更して再診断してください。
             </div>
           ) : (
             candidates.map((item, index) => (
               <article
-                key={item.id}
+                key={item.subsidy.id}
                 style={{
                   marginBottom: "14px",
                   padding: "18px",
@@ -586,8 +656,8 @@ export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
                       marginBottom: "8px",
                       padding: "4px 8px",
                       borderRadius: "999px",
-                      background: "#06c755",
-                      color: "#fff",
+                      background: "#ecfdf3",
+                      color: "#047857",
                       fontSize: "11px",
                       fontWeight: 800,
                     }}
@@ -603,128 +673,162 @@ export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
                     color: "#111827",
                   }}
                 >
-                  {item.name}
+                  {item.subsidy.name}
                 </div>
-                {item.course && (
+                {item.subsidy.course_name && (
                   <div
                     style={{
                       marginTop: "4px",
-                      color: "#374151",
+                      color: "#4b5563",
                       fontSize: "13px",
                       fontWeight: 700,
                     }}
                   >
-                    {item.course}
+                    {item.subsidy.course_name}
                   </div>
                 )}
 
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "10px",
                     marginTop: "12px",
-                    padding: "10px 12px",
-                    borderRadius: "10px",
-                    background:
-                      item.score >= 75
-                        ? "#ecfdf3"
-                        : item.score >= 55
-                          ? "#eff6ff"
-                          : "#f9fafb",
+                    fontSize: "14px",
+                    fontWeight: 800,
                   }}
                 >
-                  <span style={{ fontSize: "12px", fontWeight: 700 }}>
-                    利用可能性
-                  </span>
-                  <strong
-                    style={{
-                      fontSize: "20px",
-                      color: item.score >= 75 ? "#047857" : "#1f2937",
-                    }}
-                  >
-                    {item.score}%
-                  </strong>
+                  条件一致度：{item.score}%
                 </div>
-
-                {item.reasons.length > 0 && (
-                  <div style={{ marginTop: "14px" }}>
-                    <div style={{ fontSize: "12px", fontWeight: 800 }}>
-                      候補になる理由
-                    </div>
-                    <div
-                      style={{
-                        marginTop: "6px",
-                        display: "grid",
-                        gap: "5px",
-                        fontSize: "12px",
-                        color: "#374151",
-                      }}
-                    >
-                      {item.reasons.map((reason) => (
-                        <div key={reason}>✓ {reason}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ marginTop: "14px" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 800 }}>
-                    申請前に確認すること
-                  </div>
-                  <div
-                    style={{
-                      marginTop: "6px",
-                      display: "grid",
-                      gap: "5px",
-                      fontSize: "12px",
-                      color: "#6b7280",
-                    }}
-                  >
-                    {item.checks.map((check) => (
-                      <div key={check}>・{check}</div>
-                    ))}
-                  </div>
-                </div>
-
-                <a
-                  href={item.officialUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                <div
                   style={{
-                    display: "block",
-                    marginTop: "14px",
-                    padding: "10px",
-                    borderRadius: "8px",
-                    background: "#f3f4f6",
-                    color: "#2563eb",
-                    textAlign: "center",
-                    textDecoration: "none",
+                    marginTop: "4px",
+                    color:
+                      item.matchLevel === "high"
+                        ? "#047857"
+                        : item.matchLevel === "medium"
+                          ? "#b45309"
+                          : "#6b7280",
                     fontSize: "12px",
                     fontWeight: 800,
                   }}
                 >
-                  厚生労働省の公式情報を確認 →
-                </a>
+                  {item.matchLevel === "high"
+                    ? "該当可能性：高"
+                    : item.matchLevel === "medium"
+                      ? "該当可能性：中"
+                      : "追加確認が必要"}
+                </div>
+
+                {item.subsidy.description && (
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      color: "#4b5563",
+                      fontSize: "12px",
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    {item.subsidy.description}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    marginTop: "14px",
+                    fontSize: "12px",
+                    fontWeight: 800,
+                  }}
+                >
+                  今回一致した回答
+                </div>
+                <ul
+                  style={{
+                    margin: "6px 0 0",
+                    paddingLeft: "20px",
+                    color: "#374151",
+                    fontSize: "12px",
+                    lineHeight: 1.8,
+                  }}
+                >
+                  {item.reasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+
+                <div
+                  style={{
+                    marginTop: "12px",
+                    fontSize: "12px",
+                    fontWeight: 800,
+                  }}
+                >
+                  詳細確認が必要
+                </div>
+                <ul
+                  style={{
+                    margin: "6px 0 0",
+                    paddingLeft: "20px",
+                    color: "#6b7280",
+                    fontSize: "12px",
+                    lineHeight: 1.8,
+                  }}
+                >
+                  {item.checks.map((check) => (
+                    <li key={check}>{check}</li>
+                  ))}
+                </ul>
+
+                {item.subsidy.official_url && (
+                  <a
+                    href={item.subsidy.official_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: "inline-block",
+                      marginTop: "12px",
+                      color: "#2563eb",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    厚生労働省等の公式情報を確認 ↗
+                  </a>
+                )}
               </article>
             ))
           )}
 
           <button
             type="button"
-            onClick={reset}
+            onClick={() => setShowResult(false)}
             style={{
               width: "100%",
-              padding: "12px",
+              marginTop: "6px",
+              padding: "13px",
               border: "1px solid #d1d5db",
-              borderRadius: "10px",
+              borderRadius: "12px",
               background: "#fff",
               fontWeight: 800,
               cursor: "pointer",
             }}
           >
-            もう一度診断する
+            回答を修正する
+          </button>
+
+          <button
+            type="button"
+            onClick={reset}
+            style={{
+              width: "100%",
+              marginTop: "10px",
+              padding: "13px",
+              border: "none",
+              borderRadius: "12px",
+              background: "#111827",
+              color: "#fff",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            最初から診断する
           </button>
         </main>
       </div>
@@ -747,8 +851,9 @@ export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
             maxWidth: "700px",
             margin: "0 auto",
             padding: "14px 12px",
-            position: "relative",
-            textAlign: "center",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
           }}
         >
           {onBack && (
@@ -756,15 +861,10 @@ export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
               type="button"
               onClick={onBack}
               style={{
-                position: "absolute",
-                left: "12px",
-                top: "50%",
-                transform: "translateY(-50%)",
                 border: "1px solid #d1d5db",
                 borderRadius: "8px",
                 background: "#fff",
-                padding: "7px 9px",
-                fontSize: "12px",
+                padding: "8px 10px",
                 fontWeight: 700,
                 cursor: "pointer",
               }}
@@ -772,11 +872,15 @@ export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
               ← 戻る
             </button>
           )}
-          <div style={{ fontSize: "19px", fontWeight: 800 }}>
-            💰 助成金かんたん診断
-          </div>
-          <div style={{ marginTop: "3px", color: "#6b7280", fontSize: "11px" }}>
-            業種や雇用状況に合わせて質問が変わります
+          <div>
+            <div style={{ fontSize: "18px", fontWeight: 800 }}>
+              💰 助成金診断
+            </div>
+            <div
+              style={{ marginTop: "2px", color: "#6b7280", fontSize: "11px" }}
+            >
+              令和8年度（2026年度）・DB連携版
+            </div>
           </div>
         </div>
       </header>
@@ -785,192 +889,33 @@ export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
         style={{
           maxWidth: "700px",
           margin: "0 auto",
-          padding: "18px 12px 70px",
+          padding: "18px 12px 60px",
         }}
       >
         <div
           style={{
             marginBottom: "14px",
             padding: "14px",
-            borderRadius: "12px",
             background: "#ecfdf3",
-            border: "1px solid #bbf7d0",
+            border: "1px solid #a7f3d0",
+            borderRadius: "12px",
             color: "#065f46",
             fontSize: "12px",
             lineHeight: 1.7,
           }}
         >
-          約1分で診断できます。まず会社の状況を教えてください。
+          会社の状況に近い項目を選択してください。業種に応じて必要な質問だけを表示します。
         </div>
 
-        <Question title="業種は？" required>
-          {industries.map((item) => (
-            <OptionButton
-              key={item}
-              selected={form.industry === item}
-              onClick={() => setValue("industry", item)}
-            >
-              {item}
-            </OptionButton>
-          ))}
-        </Question>
-
-        <Question title="従業員数は？" required>
-          {employeeCounts.map((item) => (
-            <OptionButton
-              key={item}
-              selected={form.employeeCount === item}
-              onClick={() => setValue("employeeCount", item)}
-            >
-              {item}
-            </OptionButton>
-          ))}
-        </Question>
-
-        <Question title="資本金は？" required>
-          {capitals.map((item) => (
-            <OptionButton
-              key={item}
-              selected={form.capital === item}
-              onClick={() => setValue("capital", item)}
-            >
-              {item}
-            </OptionButton>
-          ))}
-        </Question>
-
-        <Question title="現在、従業員を雇用していますか？" required>
-          {yesNoButtons(form.hasEmployees, (value) =>
-            setValue("hasEmployees", value),
-          )}
-        </Question>
-
-        <Question title="今後、新しく人を採用する予定がありますか？" required>
-          {yesNoButtons(form.plansHiring, (value) =>
-            setValue("plansHiring", value),
-          )}
-        </Question>
-
-        {form.hasEmployees === "yes" && (
-          <>
-            <Question title="パート・契約社員などの非正規雇用者がいますか？">
-              {yesNoButtons(form.hasNonRegular, (value) =>
-                setValue("hasNonRegular", value),
-              )}
-            </Question>
-
-            {form.hasNonRegular === "yes" && (
-              <Question title="非正規雇用者を正社員にする予定がありますか？">
-                {yesNoButtons(form.plansRegularization, (value) =>
-                  setValue("plansRegularization", value),
-                )}
-              </Question>
-            )}
-
-            <Question title="従業員に研修・職業訓練を受けさせる予定がありますか？">
-              {yesNoButtons(form.plansTraining, (value) =>
-                setValue("plansTraining", value),
-              )}
-            </Question>
-
-            <Question title="賃金の引き上げや処遇改善を予定していますか？">
-              {yesNoButtons(form.plansWageIncrease, (value) =>
-                setValue("plansWageIncrease", value),
-              )}
-            </Question>
-
-            <Question title="雇用管理や職場環境を改善する予定がありますか？">
-              {yesNoButtons(form.plansWorkplaceImprovement, (value) =>
-                setValue("plansWorkplaceImprovement", value),
-              )}
-            </Question>
-
-            <Question title="育児・介護と仕事を両立しやすい制度を整える予定がありますか？">
-              {yesNoButtons(form.plansChildcareSupport, (value) =>
-                setValue("plansChildcareSupport", value),
-              )}
-            </Question>
-
-            {(form.industry === "IT" ||
-              form.industry === "その他" ||
-              form.industry === "製造") && (
-              <Question title="テレワークの導入・改善を予定していますか？">
-                {yesNoButtons(form.plansTelework, (value) =>
-                  setValue("plansTelework", value),
-                )}
-              </Question>
-            )}
-
-            <Question title="外国人労働者の就労環境整備を予定していますか？">
-              {yesNoButtons(form.plansForeignWorkerSupport, (value) =>
-                setValue("plansForeignWorkerSupport", value),
-              )}
-            </Question>
-          </>
-        )}
-
-        {form.plansHiring === "yes" && (
-          <>
-            <Question title="トライアル雇用を検討していますか？">
-              {yesNoButtons(form.plansTrialHiring, (value) =>
-                setValue("plansTrialHiring", value),
-              )}
-            </Question>
-
-            <Question title="採用予定者に当てはまるものはありますか？（複数選択）">
-              {targetOptions.map((item) => (
-                <OptionButton
-                  key={item}
-                  selected={form.targetHiring.includes(item)}
-                  onClick={() => toggleTarget(item)}
-                >
-                  {item}
-                </OptionButton>
-              ))}
-            </Question>
-          </>
-        )}
-
-        {form.industry === "建設" && (
-          <div
-            style={{
-              marginBottom: "14px",
-              padding: "4px 0 0",
-            }}
+        {visibleQuestions.map((question) => (
+          <QuestionCard
+            key={question.id}
+            title={question.question_text}
+            required={requiredKeys.includes(question.question_key)}
           >
-            <div
-              style={{
-                marginBottom: "10px",
-                padding: "10px 12px",
-                borderRadius: "10px",
-                background: "#eff6ff",
-                color: "#1d4ed8",
-                fontSize: "13px",
-                fontWeight: 800,
-              }}
-            >
-              🏗 建設業向け追加診断
-            </div>
-
-            <Question title="若年者・女性が働きやすい職場づくりを予定していますか？">
-              {yesNoButtons(form.constructionYoungWomen, (value) =>
-                setValue("constructionYoungWomen", value),
-              )}
-            </Question>
-
-            <Question title="建設労働者に技能実習・認定訓練を受講させる予定がありますか？">
-              {yesNoButtons(form.constructionTraining, (value) =>
-                setValue("constructionTraining", value),
-              )}
-            </Question>
-
-            <Question title="建設キャリアアップシステム（CCUS）を活用した雇用管理改善を予定していますか？">
-              {yesNoButtons(form.constructionCCUS, (value) =>
-                setValue("constructionCCUS", value),
-              )}
-            </Question>
-          </div>
-        )}
+            {renderQuestion(question)}
+          </QuestionCard>
+        ))}
 
         <button
           type="button"
