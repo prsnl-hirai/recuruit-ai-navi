@@ -146,6 +146,7 @@ export default async function handler(req: any, res: any) {
           cr.phone,
           cr.prefecture,
           cr.consultation_message,
+          cr.admin_memo,
           cr.status,
           cr.consent_to_share,
           cr.consented_at,
@@ -184,15 +185,298 @@ export default async function handler(req: any, res: any) {
           ORDER BY s.name, s.course_name, s.id
         `;
 
+        const assignments = await sql`
+          SELECT
+            ea.id,
+            ea.status,
+            ea.assigned_at,
+            ea.accepted_at,
+            ea.declined_at,
+            ea.completed_at,
+            ea.note,
+            e.id AS expert_id,
+            e.expert_type,
+            e.company_name AS expert_company_name,
+            e.name AS expert_name,
+            e.email AS expert_email,
+            e.phone AS expert_phone,
+            e.prefecture AS expert_prefecture,
+            e.website_url AS expert_website_url,
+            e.license_number AS expert_license_number
+          FROM expert_assignments ea
+          INNER JOIN experts e
+            ON e.id = ea.expert_id
+          WHERE ea.consultation_id = ${consultation.id}
+          ORDER BY ea.assigned_at DESC, ea.id DESC
+        `;
+
+        const activities = await sql`
+          SELECT
+            ca.id,
+            ca.contact_type,
+            ca.contacted_at,
+            ca.memo,
+            ca.created_at,
+            ca.expert_id,
+            e.name AS expert_name,
+            e.company_name AS expert_company_name
+          FROM consultation_activities ca
+          LEFT JOIN experts e
+            ON e.id = ca.expert_id
+          WHERE ca.consultation_id = ${consultation.id}
+          ORDER BY ca.contacted_at DESC, ca.id DESC
+        `;
+
         rows.push({
           ...consultation,
           subsidies,
+          assignments,
+          activities,
         });
       }
 
       return res.status(200).json({
         success: true,
         consultations: rows,
+      });
+    }
+
+    // =========================================================
+    // 専門家一覧
+    // =========================================================
+    if (action === "subsidy-expert-list") {
+      if (!process.env.DATABASE_URL) {
+        throw new Error("DATABASE_URLが設定されていません");
+      }
+
+      const sql = neon(process.env.DATABASE_URL);
+
+      const experts = await sql`
+        SELECT
+          id,
+          expert_type,
+          company_name,
+          name,
+          email,
+          phone,
+          postal_code,
+          prefecture,
+          city,
+          address,
+          website_url,
+          license_number,
+          introduction
+        FROM experts
+        WHERE active = TRUE
+        ORDER BY
+          CASE
+            WHEN expert_type = 'social_insurance_consultant' THEN 0
+            WHEN expert_type = 'subsidy_consultant' THEN 1
+            ELSE 2
+          END,
+          prefecture,
+          name,
+          id
+      `;
+
+      return res.status(200).json({
+        success: true,
+        experts,
+      });
+    }
+
+    // =========================================================
+    // 専門家割当
+    // =========================================================
+    if (action === "subsidy-assign-expert") {
+      if (!process.env.DATABASE_URL) {
+        throw new Error("DATABASE_URLが設定されていません");
+      }
+
+      const sql = neon(process.env.DATABASE_URL);
+      const consultationId = Number(req.body?.consultationId);
+      const expertId = Number(req.body?.expertId);
+      const note = String(req.body?.note ?? "").trim();
+
+      if (!Number.isInteger(consultationId) || consultationId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "相談IDが正しくありません",
+        });
+      }
+
+      if (!Number.isInteger(expertId) || expertId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "専門家を選択してください",
+        });
+      }
+
+      const expertRows = await sql`
+        SELECT id
+        FROM experts
+        WHERE id = ${expertId}
+          AND active = TRUE
+        LIMIT 1
+      `;
+
+      if (expertRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "専門家が見つかりません",
+        });
+      }
+
+      const assigned = await sql`
+        INSERT INTO expert_assignments (
+          consultation_id,
+          expert_id,
+          status,
+          assigned_at,
+          note
+        )
+        VALUES (
+          ${consultationId},
+          ${expertId},
+          'assigned',
+          CURRENT_TIMESTAMP,
+          ${note || null}
+        )
+        RETURNING id, consultation_id, expert_id, status, assigned_at, note
+      `;
+
+      await sql`
+        UPDATE consultation_requests
+        SET
+          status = 'assigned',
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${consultationId}
+      `;
+
+      return res.status(200).json({
+        success: true,
+        assignment: assigned[0],
+      });
+    }
+
+    // =========================================================
+    // 対応履歴追加
+    // =========================================================
+    if (action === "subsidy-consultation-activity-add") {
+      if (!process.env.DATABASE_URL) {
+        throw new Error("DATABASE_URLが設定されていません");
+      }
+
+      const sql = neon(process.env.DATABASE_URL);
+      const consultationId = Number(req.body?.consultationId);
+      const expertIdRaw = req.body?.expertId;
+      const expertId =
+        expertIdRaw === null || expertIdRaw === undefined || expertIdRaw === ""
+          ? null
+          : Number(expertIdRaw);
+      const contactType = String(req.body?.contactType ?? "");
+      const contactedAt = String(req.body?.contactedAt ?? "");
+      const memo = String(req.body?.memo ?? "").trim();
+
+      const allowedContactTypes = [
+        "phone",
+        "email",
+        "line",
+        "online_meeting",
+        "visit",
+        "other",
+      ];
+
+      if (!Number.isInteger(consultationId) || consultationId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "相談IDが正しくありません",
+        });
+      }
+
+      if (!allowedContactTypes.includes(contactType)) {
+        return res.status(400).json({
+          success: false,
+          message: "連絡方法が正しくありません",
+        });
+      }
+
+      if (!contactedAt) {
+        return res.status(400).json({
+          success: false,
+          message: "連絡日時を入力してください",
+        });
+      }
+
+      if (expertId !== null && (!Number.isInteger(expertId) || expertId <= 0)) {
+        return res.status(400).json({
+          success: false,
+          message: "専門家IDが正しくありません",
+        });
+      }
+
+      const inserted = await sql`
+        INSERT INTO consultation_activities (
+          consultation_id,
+          expert_id,
+          contact_type,
+          contacted_at,
+          memo
+        )
+        VALUES (
+          ${consultationId},
+          ${expertId},
+          ${contactType},
+          ${contactedAt},
+          ${memo || null}
+        )
+        RETURNING id, consultation_id, expert_id, contact_type, contacted_at, memo
+      `;
+
+      return res.status(200).json({
+        success: true,
+        activity: inserted[0],
+      });
+    }
+
+    // =========================================================
+    // 管理メモ保存
+    // =========================================================
+    if (action === "subsidy-consultation-memo") {
+      if (!process.env.DATABASE_URL) {
+        throw new Error("DATABASE_URLが設定されていません");
+      }
+
+      const sql = neon(process.env.DATABASE_URL);
+      const consultationId = Number(req.body?.consultationId);
+      const adminMemo = String(req.body?.adminMemo ?? "");
+
+      if (!Number.isInteger(consultationId) || consultationId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "相談IDが正しくありません",
+        });
+      }
+
+      const updated = await sql`
+        UPDATE consultation_requests
+        SET
+          admin_memo = ${adminMemo},
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${consultationId}
+        RETURNING id, admin_memo, updated_at
+      `;
+
+      if (updated.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "相談が見つかりません",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        consultation: updated[0],
       });
     }
 

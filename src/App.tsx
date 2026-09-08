@@ -523,13 +523,7 @@ function App() {
   /* 求人publishedID */
   const [publishedPublicId, setPublishedPublicId] = useState("");
 
-  type PageType =
-    | "create"
-    | "jobs"
-    | "edit"
-    | "applicants"
-    | "subsidy"
-    | "subsidy-consultations";
+  type PageType = "create" | "jobs" | "edit" | "applicants" | "subsidy";
 
   /* 現在のページ */
   const [currentPage, setCurrentPage] = useState<PageType>("create");
@@ -556,8 +550,6 @@ function App() {
       setCurrentPage("jobs");
     } else if (page === "subsidy") {
       setCurrentPage("subsidy");
-    } else if (page === "subsidy-consultations") {
-      setCurrentPage("subsidy-consultations");
     } else if (page === "applicants") {
       const jobId = params.get("jobId");
       const parsedJobId = jobId ? Number(jobId) : null;
@@ -1368,20 +1360,6 @@ function App() {
     });
   };
 
-  if (currentPage === "subsidy-consultations") {
-    return (
-      <SubsidyConsultationManagement
-        onBack={() => {
-          setCurrentPage("create");
-
-          const url = new URL(window.location.href);
-          url.searchParams.delete("page");
-          window.history.pushState({}, "", url.toString());
-        }}
-      />
-    );
-  }
-
   if (currentPage === "subsidy") {
     return (
       <SubsidyDiagnosis
@@ -1450,6 +1428,10 @@ function App() {
   ======================================== */
 
   const pathname = window.location.pathname;
+
+  if (pathname === "/admin/subsidy-consultations") {
+    return <SubsidyConsultationManagement />;
+  }
 
   if (pathname === "/company") {
     return <CompanyPage />;
@@ -1533,29 +1515,6 @@ function App() {
         </h1>
 
         <p>必要な情報を選択・入力するだけ。 AIが求人内容を最適化します。</p>
-
-        <button
-          type="button"
-          onClick={() => {
-            setCurrentPage("subsidy-consultations");
-
-            const url = new URL(window.location.href);
-            url.searchParams.set("page", "subsidy-consultations");
-            window.history.pushState({}, "", url.toString());
-          }}
-          style={{
-            marginTop: "12px",
-            border: "1px solid #d1d5db",
-            background: "#fff",
-            borderRadius: "10px",
-            padding: "9px 14px",
-            fontSize: "13px",
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          💰 助成金相談管理
-        </button>
       </div>
 
       {/* ====================================
