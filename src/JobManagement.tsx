@@ -22,6 +22,8 @@ type Job = {
   salary?: string;
   ai_salary?: string;
 
+  valid_through?: string | null;
+
   created_at?: string;
   updated_at?: string;
 };
@@ -136,6 +138,23 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
     }
 
     return date.toLocaleDateString("ja-JP");
+  };
+
+  /*
+   * 掲載終了日を過ぎているか
+   */
+  const isExpired = (validThrough?: string | null) => {
+    if (!validThrough) {
+      return false;
+    }
+
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    const todayString = `${year}-${month}-${day}`;
+
+    return String(validThrough).slice(0, 10) < todayString;
   };
 
   /*
@@ -346,6 +365,8 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
 
             const salary = job.ai_salary || job.salary || "";
 
+            const expired = isExpired(job.valid_through);
+
             return (
               <article
                 key={job.id}
@@ -429,6 +450,24 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
                       {formatDate(job.created_at)}
                     </div>
                   )}
+
+                  {job.valid_through && (
+                    <div>
+                      📅 掲載終了日：
+                      {formatDate(job.valid_through)}
+                      {expired && (
+                        <span
+                          style={{
+                            marginLeft: "8px",
+                            color: "#dc2626",
+                            fontWeight: 700,
+                          }}
+                        >
+                          掲載終了
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div
@@ -456,7 +495,11 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
                     <input
                       type="checkbox"
                       checked={job.status === "1"}
-                      onChange={() => handleTogglePublish(job)}
+                      disabled={expired}
+                      onChange={() => {
+                        if (expired) return;
+                        handleTogglePublish(job);
+                      }}
                     />
 
                     <span className="publish-slider" />
