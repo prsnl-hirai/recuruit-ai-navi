@@ -37,6 +37,8 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
   const [selectedApplication, setSelectedApplication] =
     useState<Application | null>(null);
 
+  const [savingStatusId, setSavingStatusId] = useState<number | null>(null);
+
   /*
    * 応募者一覧取得
    */
@@ -137,22 +139,82 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
    * 4: 不採用
    * などへ拡張可能。
    */
-  const getApplicationStatusLabel = (status?: string) => {
-    switch (status) {
-      case "1":
-        return "連絡済み";
+  const handleStatusChange = async (
+    application: Application,
+    newStatus: string,
+  ) => {
+    const previousStatus = application.status ?? "0";
 
-      case "2":
-        return "面接予定";
+    try {
+      setSavingStatusId(application.id);
+      setErrorMessage("");
 
-      case "3":
-        return "採用";
+      let userId = "";
 
-      case "4":
-        return "不採用";
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+      }
 
-      default:
-        return "未対応";
+      if (!userId) {
+        throw new Error("LINEユーザー情報を取得できませんでした。");
+      }
+
+      // 画面を先に更新
+      setApplications((prev) =>
+        prev.map((item) =>
+          item.id === application.id ? { ...item, status: newStatus } : item,
+        ),
+      );
+
+      setSelectedApplication((prev) =>
+        prev?.id === application.id ? { ...prev, status: newStatus } : prev,
+      );
+
+      const response = await fetch("/api/applications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: application.id,
+          userId,
+          status: newStatus,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "応募ステータスを更新できませんでした。",
+        );
+      }
+    } catch (error) {
+      console.error("応募ステータス更新エラー:", error);
+
+      // 更新失敗時は元の状態へ戻す
+      setApplications((prev) =>
+        prev.map((item) =>
+          item.id === application.id
+            ? { ...item, status: previousStatus }
+            : item,
+        ),
+      );
+
+      setSelectedApplication((prev) =>
+        prev?.id === application.id
+          ? { ...prev, status: previousStatus }
+          : prev,
+      );
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "応募ステータスを更新できませんでした。",
+      );
+    } finally {
+      setSavingStatusId(null);
     }
   };
 
@@ -191,8 +253,6 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
   }, [applications, jobId]);
 
   const renderApplicationCard = (application: Application) => {
-    const statusLabel = getApplicationStatusLabel(application.status);
-
     return (
       <article
         key={application.id}
@@ -245,25 +305,49 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
             </div>
           </div>
 
-          <span
+          <div
             style={{
               flexShrink: 0,
-              padding: "4px 9px",
-              borderRadius: "999px",
-              background:
-                application.status === "0" || !application.status
-                  ? "#fef3c7"
-                  : "#e0f2fe",
-              color:
-                application.status === "0" || !application.status
-                  ? "#92400e"
-                  : "#0369a1",
-              fontSize: "11px",
-              fontWeight: 700,
+              minWidth: "110px",
             }}
           >
-            {statusLabel}
-          </span>
+            <select
+              value={application.status ?? "0"}
+              disabled={savingStatusId === application.id}
+              onChange={(e) => handleStatusChange(application, e.target.value)}
+              aria-label={`${application.name || "応募者"}の選考状況`}
+              style={{
+                width: "100%",
+                padding: "7px 8px",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                background: "#ffffff",
+                color: "#374151",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: savingStatusId === application.id ? "wait" : "pointer",
+              }}
+            >
+              <option value="0">未対応</option>
+              <option value="1">連絡済み</option>
+              <option value="2">面接予定</option>
+              <option value="3">採用</option>
+              <option value="4">不採用</option>
+            </select>
+
+            {savingStatusId === application.id && (
+              <div
+                style={{
+                  marginTop: "4px",
+                  color: "#777",
+                  fontSize: "10px",
+                  textAlign: "center",
+                }}
+              >
+                保存中...
+              </div>
+            )}
+          </div>
         </div>
 
         {jobId === null && (
@@ -655,9 +739,45 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
               }}
             >
               <div>
-                <strong>ステータス</strong>
-                <br />
-                {getApplicationStatusLabel(selectedApplication.status)}
+                <strong>選考状況</strong>
+
+                <select
+                  value={selectedApplication.status ?? "0"}
+                  disabled={savingStatusId === selectedApplication.id}
+                  onChange={(e) =>
+                    handleStatusChange(selectedApplication, e.target.value)
+                  }
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    marginTop: "7px",
+                    padding: "10px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "8px",
+                    background: "#ffffff",
+                    color: "#374151",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                  }}
+                >
+                  <option value="0">未対応</option>
+                  <option value="1">連絡済み</option>
+                  <option value="2">面接予定</option>
+                  <option value="3">採用</option>
+                  <option value="4">不採用</option>
+                </select>
+
+                {savingStatusId === selectedApplication.id && (
+                  <div
+                    style={{
+                      marginTop: "5px",
+                      color: "#777",
+                      fontSize: "11px",
+                    }}
+                  >
+                    保存中...
+                  </div>
+                )}
               </div>
 
               {selectedApplication.email && (
