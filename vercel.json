@@ -8,6 +8,14 @@
     {
       "source": "/indeed/jobs.xml",
       "destination": "/api/indeed-feed"
+    },
+    {
+      "source": "/company",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/index.html"
     }
   ]
 }
