@@ -3,16 +3,154 @@ import { neon } from "@neondatabase/serverless";
 const sql = neon(process.env.DATABASE_URL!);
 
 export default async function handler(req: any, res: any) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-
-    return res.status(405).json({
-      success: false,
-      message: "Method Not Allowed",
-    });
-  }
-
   try {
+    // ========================================
+    // 応募者一覧取得
+    // ========================================
+    if (req.method === "GET") {
+      const userId = String(req.query.userId ?? "").trim();
+      const jobId = String(req.query.jobId ?? "").trim();
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: "ユーザーIDがありません。",
+        });
+      }
+
+      const applications = jobId
+        ? await sql`
+            SELECT
+              a.id,
+              a.job_id,
+              a.name,
+              a.email,
+              a.phone,
+              a.message,
+              a.status,
+              a.source,
+              a.created_at,
+              j.public_id,
+              j.title,
+              j.ai_title,
+              j.company_name
+            FROM applications a
+            INNER JOIN jobs j
+              ON j.id = a.job_id
+            WHERE j.user_id = ${userId}
+              AND j.id = ${jobId}
+              AND j.status <> '9'
+            ORDER BY a.created_at DESC
+          `
+        : await sql`
+            SELECT
+              a.id,
+              a.job_id,
+              a.name,
+              a.email,
+              a.phone,
+              a.message,
+              a.status,
+              a.source,
+              a.created_at,
+              j.public_id,
+              j.title,
+              j.ai_title,
+              j.company_name
+            FROM applications a
+            INNER JOIN jobs j
+              ON j.id = a.job_id
+            WHERE j.user_id = ${userId}
+              AND j.status <> '9'
+            ORDER BY a.created_at DESC
+          `;
+
+      return res.status(200).json({
+        success: true,
+        applications,
+      });
+    }
+
+    // ========================================
+    // 応募ステータス変更
+    // ========================================
+    if (req.method === "PATCH") {
+      const { id, userId, status } = req.body ?? {};
+
+      const applicationId = Number(id);
+      const ownerUserId = String(userId ?? "").trim();
+      const newStatus = String(status ?? "").trim();
+
+      if (!Number.isFinite(applicationId) || applicationId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "応募IDが正しくありません。",
+        });
+      }
+
+      if (!ownerUserId) {
+        return res.status(400).json({
+          success: false,
+          message: "ユーザーIDがありません。",
+        });
+      }
+
+      const allowedStatuses = ["0", "1", "2", "3", "4"];
+
+      if (!allowedStatuses.includes(newStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: "応募ステータスが正しくありません。",
+        });
+      }
+
+      // 応募先求人の所有者が現在のLINEユーザーであることを確認して更新
+      const applications = await sql`
+        UPDATE applications AS a
+        SET status = ${newStatus}
+        FROM jobs AS j
+        WHERE a.id = ${applicationId}
+          AND a.job_id = j.id
+          AND j.user_id = ${ownerUserId}
+          AND j.status <> '9'
+        RETURNING
+          a.id,
+          a.job_id,
+          a.name,
+          a.email,
+          a.phone,
+          a.message,
+          a.status,
+          a.source,
+          a.created_at
+      `;
+
+      if (applications.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "応募情報が見つかりませんでした。",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "応募ステータスを更新しました。",
+        application: applications[0],
+      });
+    }
+
+    // ========================================
+    // 応募保存
+    // ========================================
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST, PATCH");
+
+      return res.status(405).json({
+        success: false,
+        message: "Method Not Allowed",
+      });
+    }
+
     const { public_id, name, email, phone, message } = req.body ?? {};
 
     if (!public_id) {
