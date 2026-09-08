@@ -127,6 +127,133 @@ export default async function handler(req: any, res: any) {
     }
 
     // =========================================================
+    // 助成金相談 管理一覧
+    // =========================================================
+    if (action === "subsidy-consultation-list") {
+      if (!process.env.DATABASE_URL) {
+        throw new Error("DATABASE_URLが設定されていません");
+      }
+
+      const sql = neon(process.env.DATABASE_URL);
+
+      const consultations = await sql`
+        SELECT
+          cr.id,
+          cr.diagnosis_id,
+          cr.company_name,
+          cr.contact_name,
+          cr.email,
+          cr.phone,
+          cr.prefecture,
+          cr.consultation_message,
+          cr.status,
+          cr.consent_to_share,
+          cr.consented_at,
+          cr.created_at,
+          sd.industry,
+          sd.employee_count,
+          sd.capital,
+          sd.answers
+        FROM consultation_requests cr
+        LEFT JOIN subsidy_diagnoses sd
+          ON sd.id = cr.diagnosis_id
+        ORDER BY
+          CASE WHEN cr.status = 'new' THEN 0 ELSE 1 END,
+          cr.created_at DESC,
+          cr.id DESC
+      `;
+
+      const rows = [];
+      for (const consultation of consultations) {
+        const subsidies = await sql`
+          SELECT
+            s.id,
+            s.name,
+            s.course_name,
+            sdr.match_level,
+            sdr.score,
+            sdr.matched_reasons,
+            sdr.required_checks
+          FROM consultation_subsidies cs
+          INNER JOIN subsidies s
+            ON s.id = cs.subsidy_id
+          LEFT JOIN subsidy_diagnosis_results sdr
+            ON sdr.diagnosis_id = ${consultation.diagnosis_id}
+           AND sdr.subsidy_id = s.id
+          WHERE cs.consultation_id = ${consultation.id}
+          ORDER BY s.name, s.course_name, s.id
+        `;
+
+        rows.push({
+          ...consultation,
+          subsidies,
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        consultations: rows,
+      });
+    }
+
+    // =========================================================
+    // 助成金相談 ステータス更新
+    // =========================================================
+    if (action === "subsidy-consultation-status") {
+      if (!process.env.DATABASE_URL) {
+        throw new Error("DATABASE_URLが設定されていません");
+      }
+
+      const sql = neon(process.env.DATABASE_URL);
+      const consultationId = Number(req.body?.consultationId);
+      const status = String(req.body?.status ?? "");
+
+      const allowedStatuses = [
+        "new",
+        "contacting",
+        "consulting",
+        "assigned",
+        "completed",
+        "closed",
+      ];
+
+      if (!Number.isInteger(consultationId) || consultationId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "相談IDが正しくありません",
+        });
+      }
+
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "ステータスが正しくありません",
+        });
+      }
+
+      const updated = await sql`
+        UPDATE consultation_requests
+        SET
+          status = ${status},
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${consultationId}
+        RETURNING id, status, updated_at
+      `;
+
+      if (updated.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "相談が見つかりません",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        consultation: updated[0],
+      });
+    }
+
+    // =========================================================
     // 助成金診断 → 専門家相談申込み
     // =========================================================
     if (action === "subsidy-consultation") {
