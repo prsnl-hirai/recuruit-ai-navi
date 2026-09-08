@@ -176,6 +176,9 @@ export default async function handler(req: any, res: any) {
               a.interview_method,
               a.interview_location,
               a.interview_memo,
+              a.interview_rating,
+              a.interview_result,
+              a.interview_result_comment,
               a.status,
               a.source,
               a.created_at,
@@ -205,6 +208,9 @@ export default async function handler(req: any, res: any) {
               a.interview_method,
               a.interview_location,
               a.interview_memo,
+              a.interview_rating,
+              a.interview_result,
+              a.interview_result_comment,
               a.status,
               a.source,
               a.created_at,
@@ -433,6 +439,97 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json({
           success: true,
           message: "面接情報を保存しました。",
+          application: applications[0],
+        });
+      }
+
+      // ----------------------------------------
+      // 面接結果保存
+      // ----------------------------------------
+      if (action === "save-interview-result") {
+        const interviewRating = Number(req.body?.interviewRating);
+        const interviewResult = String(req.body?.interviewResult ?? "").trim();
+        const interviewResultComment = String(
+          req.body?.interviewResultComment ?? "",
+        );
+
+        if (
+          !Number.isInteger(interviewRating) ||
+          interviewRating < 1 ||
+          interviewRating > 5
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "面接評価は1〜5で指定してください。",
+          });
+        }
+
+        const allowedResults = ["保留", "採用", "不採用"];
+
+        if (!allowedResults.includes(interviewResult)) {
+          return res.status(400).json({
+            success: false,
+            message: "面接結果が正しくありません。",
+          });
+        }
+
+        if (interviewResultComment.length > 5000) {
+          return res.status(400).json({
+            success: false,
+            message: "面接コメントは5000文字以内で入力してください。",
+          });
+        }
+
+        const nextStatus =
+          interviewResult === "採用"
+            ? "3"
+            : interviewResult === "不採用"
+              ? "4"
+              : "2";
+
+        const applications = await sql`
+          UPDATE applications AS a
+          SET
+            interview_rating = ${interviewRating},
+            interview_result = ${interviewResult},
+            interview_result_comment = ${interviewResultComment},
+            status = ${nextStatus}
+          FROM jobs AS j
+          WHERE a.id = ${applicationId}
+            AND a.job_id = j.id
+            AND j.user_id = ${ownerUserId}
+            AND j.status <> '9'
+          RETURNING
+            a.id,
+            a.job_id,
+            a.name,
+            a.email,
+            a.phone,
+            a.message,
+            a.memo,
+            a.interview_date,
+            a.interview_time,
+            a.interview_method,
+            a.interview_location,
+            a.interview_memo,
+            a.interview_rating,
+            a.interview_result,
+            a.interview_result_comment,
+            a.status,
+            a.source,
+            a.created_at
+        `;
+
+        if (applications.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "応募情報が見つかりませんでした。",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "面接結果を保存しました。",
           application: applications[0],
         });
       }

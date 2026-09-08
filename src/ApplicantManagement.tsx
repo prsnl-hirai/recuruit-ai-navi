@@ -16,6 +16,9 @@ type Application = {
   interview_method?: string | null;
   interview_location?: string | null;
   interview_memo?: string | null;
+  interview_rating?: number | null;
+  interview_result?: string | null;
+  interview_result_comment?: string | null;
 
   status?: string;
   source?: string;
@@ -60,6 +63,10 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
   const [interviewMemo, setInterviewMemo] = useState("");
   const [savingInterview, setSavingInterview] = useState(false);
   const [interviewDuration, setInterviewDuration] = useState("60");
+  const [interviewRating, setInterviewRating] = useState(0);
+  const [interviewResult, setInterviewResult] = useState("");
+  const [interviewResultComment, setInterviewResultComment] = useState("");
+  const [savingInterviewResult, setSavingInterviewResult] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -562,6 +569,96 @@ ${company}
     }
   };
 
+  const handleInterviewResultSave = async () => {
+    if (!selectedApplication) return;
+
+    if (interviewRating < 1 || interviewRating > 5) {
+      alert("面接評価を1〜5で選択してください。");
+      return;
+    }
+
+    if (!interviewResult) {
+      alert("面接結果を選択してください。");
+      return;
+    }
+
+    try {
+      setSavingInterviewResult(true);
+
+      let userId = "";
+
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+      }
+
+      if (!userId) {
+        throw new Error("LINEユーザー情報を取得できませんでした。");
+      }
+
+      const response = await fetch("/api/applications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "save-interview-result",
+          id: selectedApplication.id,
+          userId,
+          interviewRating,
+          interviewResult,
+          interviewResultComment,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "面接結果を保存できませんでした。");
+      }
+
+      const newStatus =
+        interviewResult === "採用"
+          ? "3"
+          : interviewResult === "不採用"
+            ? "4"
+            : "2";
+
+      const updated: Application = {
+        ...selectedApplication,
+        interview_rating: interviewRating,
+        interview_result: interviewResult,
+        interview_result_comment: interviewResultComment,
+        status: newStatus,
+      };
+
+      setApplications((prev) =>
+        prev.map((item) =>
+          item.id === selectedApplication.id ? updated : item,
+        ),
+      );
+
+      setSelectedApplication(updated);
+
+      alert(
+        interviewResult === "採用"
+          ? "面接結果を保存し、ステータスを「採用」に更新しました。"
+          : interviewResult === "不採用"
+            ? "面接結果を保存し、ステータスを「不採用」に更新しました。"
+            : "面接結果を保存しました。",
+      );
+    } catch (error) {
+      console.error("面接結果保存エラー:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "面接結果の保存中にエラーが発生しました。",
+      );
+    } finally {
+      setSavingInterviewResult(false);
+    }
+  };
+
   const handleMemoSave = async () => {
     if (!selectedApplication) {
       return;
@@ -845,6 +942,64 @@ ${company}
                       ` ・${application.interview_method}`}
                   </div>
                 )}
+
+              {(application.interview_rating ||
+                application.interview_result) && (
+                <div
+                  style={{
+                    marginTop: "5px",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "6px",
+                    alignItems: "center",
+                  }}
+                >
+                  {application.interview_rating ? (
+                    <span
+                      style={{
+                        padding: "5px 8px",
+                        borderRadius: "999px",
+                        background: "#fff7ed",
+                        color: "#9a3412",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {"★".repeat(application.interview_rating)}
+                      {"☆".repeat(5 - application.interview_rating)}
+                    </span>
+                  ) : null}
+
+                  {application.interview_result && (
+                    <span
+                      style={{
+                        padding: "5px 8px",
+                        borderRadius: "999px",
+                        background:
+                          application.interview_result === "採用"
+                            ? "#ecfdf5"
+                            : application.interview_result === "不採用"
+                              ? "#fef2f2"
+                              : "#f3f4f6",
+                        color:
+                          application.interview_result === "採用"
+                            ? "#047857"
+                            : application.interview_result === "不採用"
+                              ? "#b91c1c"
+                              : "#4b5563",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {application.interview_result === "採用"
+                        ? "✅ 採用"
+                        : application.interview_result === "不採用"
+                          ? "❌ 不採用"
+                          : "⏳ 保留"}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -991,6 +1146,11 @@ ${company}
               setInterviewMethod(application.interview_method ?? "");
               setInterviewLocation(application.interview_location ?? "");
               setInterviewMemo(application.interview_memo ?? "");
+              setInterviewRating(application.interview_rating ?? 0);
+              setInterviewResult(application.interview_result ?? "");
+              setInterviewResultComment(
+                application.interview_result_comment ?? "",
+              );
             }}
             style={{
               flex: 1,
@@ -1746,7 +1906,7 @@ ${company}
                       onChange={(e) => setInterviewMemo(e.target.value)}
                       maxLength={5000}
                       rows={4}
-                      placeholder="例：履歴書持参、担当：平井"
+                      placeholder="例：履歴書持参"
                       style={{
                         width: "100%",
                         boxSizing: "border-box",
@@ -1820,6 +1980,162 @@ ${company}
                   </div>
                 </div>
               )}
+
+              {selectedApplication.interview_date &&
+                ["2", "3", "4"].includes(
+                  String(selectedApplication.status ?? "0"),
+                ) && (
+                  <div
+                    style={{
+                      width: "100%",
+                      minWidth: 0,
+                      boxSizing: "border-box",
+                      padding: "14px",
+                      border: "1px solid #fde68a",
+                      borderRadius: "10px",
+                      background: "#fffbeb",
+                    }}
+                  >
+                    <strong>📝 面接結果</strong>
+
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      面接評価
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "6px",
+                        marginTop: "7px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {[1, 2, 3, 4, 5].map((rating) => (
+                        <button
+                          key={rating}
+                          type="button"
+                          onClick={() => setInterviewRating(rating)}
+                          aria-label={`評価 ${rating}`}
+                          style={{
+                            border: "none",
+                            background: "transparent",
+                            padding: "2px",
+                            fontSize: "30px",
+                            lineHeight: 1,
+                            color:
+                              rating <= interviewRating ? "#f59e0b" : "#d1d5db",
+                            cursor: "pointer",
+                          }}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+
+                    <label
+                      style={{
+                        display: "block",
+                        marginTop: "12px",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      面接結果
+                      <select
+                        value={interviewResult}
+                        onChange={(e) => setInterviewResult(e.target.value)}
+                        style={{
+                          width: "100%",
+                          minWidth: 0,
+                          boxSizing: "border-box",
+                          marginTop: "6px",
+                          padding: "10px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "8px",
+                          background: "#fff",
+                          font: "inherit",
+                        }}
+                      >
+                        <option value="">選択してください</option>
+                        <option value="保留">保留</option>
+                        <option value="採用">採用</option>
+                        <option value="不採用">不採用</option>
+                      </select>
+                    </label>
+
+                    <label
+                      style={{
+                        display: "block",
+                        marginTop: "12px",
+                        fontSize: "13px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      面接コメント
+                      <textarea
+                        value={interviewResultComment}
+                        onChange={(e) =>
+                          setInterviewResultComment(e.target.value)
+                        }
+                        maxLength={5000}
+                        rows={4}
+                        placeholder="例：受け答えが丁寧。土日勤務可能。接客経験あり。"
+                        style={{
+                          width: "100%",
+                          minWidth: 0,
+                          boxSizing: "border-box",
+                          marginTop: "6px",
+                          padding: "10px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "8px",
+                          background: "#fff",
+                          font: "inherit",
+                          resize: "vertical",
+                        }}
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={handleInterviewResultSave}
+                      disabled={savingInterviewResult}
+                      style={{
+                        width: "100%",
+                        marginTop: "12px",
+                        padding: "11px",
+                        border: "none",
+                        borderRadius: "8px",
+                        background: savingInterviewResult
+                          ? "#9ca3af"
+                          : "#d97706",
+                        color: "#fff",
+                        fontWeight: 700,
+                        cursor: savingInterviewResult ? "wait" : "pointer",
+                      }}
+                    >
+                      {savingInterviewResult
+                        ? "保存中..."
+                        : "💾 面接結果を保存"}
+                    </button>
+
+                    <div
+                      style={{
+                        marginTop: "7px",
+                        color: "#6b7280",
+                        fontSize: "11px",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      「採用」「不採用」を保存すると、選考状況も自動で連動します。
+                    </div>
+                  </div>
+                )}
 
               {selectedApplication.email && (
                 <div>
