@@ -173,7 +173,6 @@ export default async function handler(req: any, res: any) {
           a.email,
           a.phone,
           a.message,
-          a.memo,
           a.status,
           a.source,
           a.created_at
@@ -296,11 +295,11 @@ export default async function handler(req: any, res: any) {
       application: applications[0],
     });
   } catch (error) {
-    console.error("application save error:", error);
+    console.error("applications API error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "応募の受付中にエラーが発生しました。",
+      message: "応募情報の処理中にエラーが発生しました。",
     });
   }
 }

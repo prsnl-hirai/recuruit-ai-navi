@@ -533,41 +533,57 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
           position: "sticky",
           top: 0,
           zIndex: 10,
-          padding: "16px",
           background: "#ffffff",
-          borderBottom: "1px solid #eeeeee",
+          borderBottom: "1px solid #e5e7eb",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
         }}
       >
         <div
           style={{
             maxWidth: "700px",
             margin: "0 auto",
+            position: "relative",
+            minHeight: "72px",
             display: "flex",
             alignItems: "center",
-            gap: "12px",
+            justifyContent: "center",
+            padding: "10px 12px",
+            boxSizing: "border-box",
           }}
         >
           <button
             type="button"
             onClick={onBack}
             style={{
-              border: "none",
-              background: "transparent",
-              padding: "6px 0",
+              position: "absolute",
+              left: "12px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "#ffffff",
+              padding: "8px 10px",
               color: "#2563eb",
-              fontSize: "14px",
+              fontSize: "13px",
               fontWeight: 700,
+              lineHeight: 1.2,
+              whiteSpace: "nowrap",
               cursor: "pointer",
             }}
           >
             ← 求人管理
           </button>
 
-          <div>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "0 92px",
+            }}
+          >
             <div
               style={{
-                fontSize: "20px",
+                fontSize: "19px",
                 fontWeight: 700,
+                color: "#111827",
+                lineHeight: 1.25,
               }}
             >
               👤 応募者管理
@@ -575,12 +591,13 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
 
             <div
               style={{
-                marginTop: "2px",
-                color: "#777",
-                fontSize: "12px",
+                marginTop: "3px",
+                color: "#6b7280",
+                fontSize: "11px",
+                lineHeight: 1.4,
               }}
             >
-              応募者情報を確認できます
+              応募者情報を確認・管理
             </div>
           </div>
         </div>
