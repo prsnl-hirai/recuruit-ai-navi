@@ -59,6 +59,7 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
   const [interviewLocation, setInterviewLocation] = useState("");
   const [interviewMemo, setInterviewMemo] = useState("");
   const [savingInterview, setSavingInterview] = useState(false);
+  const [interviewDuration, setInterviewDuration] = useState("60");
 
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -431,7 +432,8 @@ ${company}
     }
 
     const start = new Date(year, month - 1, day, hour, minute, 0);
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const durationMinutes = Number(interviewDuration) || 60;
+    const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
 
     const toGoogleDate = (date: Date) => {
       const y = String(date.getFullYear());
@@ -451,6 +453,7 @@ ${company}
       `求人：${jobTitle}`,
       `応募者：${applicantName}`,
       interviewMethod ? `面接方法：${interviewMethod}` : "",
+      `面接時間：${interviewDuration}分`,
       selectedApplication.phone ? `電話番号：${selectedApplication.phone}` : "",
       selectedApplication.email ? `メール：${selectedApplication.email}` : "",
       interviewMemo ? `メモ：${interviewMemo}` : "",
@@ -1553,14 +1556,22 @@ ${company}
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fit, minmax(140px, 1fr))",
+                      gridTemplateColumns: "minmax(0, 1fr)",
                       gap: "10px",
                       marginTop: "10px",
                       width: "100%",
+                      minWidth: 0,
                     }}
                   >
-                    <label style={{ fontSize: "13px", fontWeight: 700 }}>
+                    <label
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        minWidth: 0,
+                        fontSize: "13px",
+                        fontWeight: 700,
+                      }}
+                    >
                       面接日
                       <input
                         type="date"
@@ -1568,6 +1579,7 @@ ${company}
                         onChange={(e) => setInterviewDate(e.target.value)}
                         style={{
                           width: "100%",
+                          maxWidth: "100%",
                           minWidth: 0,
                           boxSizing: "border-box",
                           marginTop: "6px",
@@ -1580,7 +1592,15 @@ ${company}
                       />
                     </label>
 
-                    <label style={{ fontSize: "13px", fontWeight: 700 }}>
+                    <label
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        minWidth: 0,
+                        fontSize: "13px",
+                        fontWeight: 700,
+                      }}
+                    >
                       面接時間
                       <input
                         type="time"
@@ -1588,6 +1608,7 @@ ${company}
                         onChange={(e) => setInterviewTime(e.target.value)}
                         style={{
                           width: "100%",
+                          maxWidth: "100%",
                           minWidth: 0,
                           boxSizing: "border-box",
                           marginTop: "6px",
@@ -1600,6 +1621,38 @@ ${company}
                       />
                     </label>
                   </div>
+
+                  <label
+                    style={{
+                      display: "block",
+                      marginTop: "10px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    面接時間
+                    <select
+                      value={interviewDuration}
+                      onChange={(e) => setInterviewDuration(e.target.value)}
+                      style={{
+                        width: "100%",
+                        minWidth: 0,
+                        boxSizing: "border-box",
+                        marginTop: "6px",
+                        padding: "10px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        background: "#fff",
+                        font: "inherit",
+                      }}
+                    >
+                      <option value="30">30分</option>
+                      <option value="45">45分</option>
+                      <option value="60">60分</option>
+                      <option value="90">90分</option>
+                      <option value="120">120分</option>
+                    </select>
+                  </label>
 
                   <label
                     style={{
@@ -1672,7 +1725,7 @@ ${company}
                       onChange={(e) => setInterviewMemo(e.target.value)}
                       maxLength={5000}
                       rows={4}
-                      placeholder="例：履歴書持参、担当：平井"
+                      placeholder="例：履歴書持参"
                       style={{
                         width: "100%",
                         boxSizing: "border-box",
@@ -1742,7 +1795,7 @@ ${company}
                       lineHeight: 1.5,
                     }}
                   >
-                    面接時間は1時間で登録画面を開きます。Googleカレンダー側で変更できます。
+                    選択した面接時間でGoogleカレンダーの終了時刻を設定します。
                   </div>
                 </div>
               )}
