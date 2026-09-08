@@ -265,9 +265,9 @@ export default async function handler(req: any, res: any) {
           address,
           website_url,
           license_number,
-          introduction
+          introduction,
+          active
         FROM experts
-        WHERE active = TRUE
         ORDER BY
           CASE
             WHEN expert_type = 'social_insurance_consultant' THEN 0
@@ -283,6 +283,165 @@ export default async function handler(req: any, res: any) {
         success: true,
         experts,
       });
+    }
+
+    // =========================================================
+    // 専門家 新規登録
+    // =========================================================
+    if (action === "subsidy-expert-create") {
+      if (!process.env.DATABASE_URL)
+        throw new Error("DATABASE_URLが設定されていません");
+      const sql = neon(process.env.DATABASE_URL);
+
+      const expertType = String(req.body?.expertType ?? "").trim();
+      const name = String(req.body?.name ?? "").trim();
+      const companyName = String(req.body?.companyName ?? "").trim();
+      const email = String(req.body?.email ?? "").trim();
+      const phone = String(req.body?.phone ?? "").trim();
+      const postalCode = String(req.body?.postalCode ?? "").trim();
+      const prefecture = String(req.body?.prefecture ?? "").trim();
+      const city = String(req.body?.city ?? "").trim();
+      const address = String(req.body?.address ?? "").trim();
+      const websiteUrl = String(req.body?.websiteUrl ?? "").trim();
+      const licenseNumber = String(req.body?.licenseNumber ?? "").trim();
+      const introduction = String(req.body?.introduction ?? "").trim();
+
+      const allowedTypes = [
+        "social_insurance_consultant",
+        "subsidy_consultant",
+        "other",
+      ];
+      if (!allowedTypes.includes(expertType)) {
+        return res
+          .status(400)
+          .json({ success: false, message: "専門家種別が正しくありません" });
+      }
+      if (!name) {
+        return res
+          .status(400)
+          .json({ success: false, message: "氏名は必須です" });
+      }
+
+      const rows = await sql`
+        INSERT INTO experts (
+          expert_type, company_name, name, email, phone, postal_code,
+          prefecture, city, address, website_url, license_number,
+          introduction, active, created_at, updated_at
+        )
+        VALUES (
+          ${expertType}, ${companyName || null}, ${name},
+          ${email || null}, ${phone || null}, ${postalCode || null},
+          ${prefecture || null}, ${city || null}, ${address || null},
+          ${websiteUrl || null}, ${licenseNumber || null},
+          ${introduction || null}, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        RETURNING *
+      `;
+      return res.status(200).json({ success: true, expert: rows[0] });
+    }
+
+    // =========================================================
+    // 専門家 更新
+    // =========================================================
+    if (action === "subsidy-expert-update") {
+      if (!process.env.DATABASE_URL)
+        throw new Error("DATABASE_URLが設定されていません");
+      const sql = neon(process.env.DATABASE_URL);
+
+      const expertId = Number(req.body?.expertId);
+      const expertType = String(req.body?.expertType ?? "").trim();
+      const name = String(req.body?.name ?? "").trim();
+      const companyName = String(req.body?.companyName ?? "").trim();
+      const email = String(req.body?.email ?? "").trim();
+      const phone = String(req.body?.phone ?? "").trim();
+      const postalCode = String(req.body?.postalCode ?? "").trim();
+      const prefecture = String(req.body?.prefecture ?? "").trim();
+      const city = String(req.body?.city ?? "").trim();
+      const address = String(req.body?.address ?? "").trim();
+      const websiteUrl = String(req.body?.websiteUrl ?? "").trim();
+      const licenseNumber = String(req.body?.licenseNumber ?? "").trim();
+      const introduction = String(req.body?.introduction ?? "").trim();
+
+      if (!Number.isInteger(expertId) || expertId <= 0) {
+        return res
+          .status(400)
+          .json({ success: false, message: "専門家IDが正しくありません" });
+      }
+      if (
+        ![
+          "social_insurance_consultant",
+          "subsidy_consultant",
+          "other",
+        ].includes(expertType)
+      ) {
+        return res
+          .status(400)
+          .json({ success: false, message: "専門家種別が正しくありません" });
+      }
+      if (!name) {
+        return res
+          .status(400)
+          .json({ success: false, message: "氏名は必須です" });
+      }
+
+      const rows = await sql`
+        UPDATE experts SET
+          expert_type = ${expertType},
+          company_name = ${companyName || null},
+          name = ${name},
+          email = ${email || null},
+          phone = ${phone || null},
+          postal_code = ${postalCode || null},
+          prefecture = ${prefecture || null},
+          city = ${city || null},
+          address = ${address || null},
+          website_url = ${websiteUrl || null},
+          license_number = ${licenseNumber || null},
+          introduction = ${introduction || null},
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${expertId}
+        RETURNING *
+      `;
+      if (rows.length === 0) {
+        return res
+          .status(404)
+          .json({ success: false, message: "専門家が見つかりません" });
+      }
+      return res.status(200).json({ success: true, expert: rows[0] });
+    }
+
+    // =========================================================
+    // 専門家 有効・無効切替
+    // =========================================================
+    if (action === "subsidy-expert-status") {
+      if (!process.env.DATABASE_URL)
+        throw new Error("DATABASE_URLが設定されていません");
+      const sql = neon(process.env.DATABASE_URL);
+
+      const expertId = Number(req.body?.expertId);
+      const active = req.body?.active;
+      if (
+        !Number.isInteger(expertId) ||
+        expertId <= 0 ||
+        typeof active !== "boolean"
+      ) {
+        return res
+          .status(400)
+          .json({ success: false, message: "専門家情報が正しくありません" });
+      }
+
+      const rows = await sql`
+        UPDATE experts
+        SET active = ${active}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${expertId}
+        RETURNING id, active, updated_at
+      `;
+      if (rows.length === 0) {
+        return res
+          .status(404)
+          .json({ success: false, message: "専門家が見つかりません" });
+      }
+      return res.status(200).json({ success: true, expert: rows[0] });
     }
 
     // =========================================================
