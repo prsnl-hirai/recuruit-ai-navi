@@ -3,16 +3,86 @@ import { neon } from "@neondatabase/serverless";
 const sql = neon(process.env.DATABASE_URL!);
 
 export default async function handler(req: any, res: any) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-
-    return res.status(405).json({
-      success: false,
-      message: "Method Not Allowed",
-    });
-  }
-
   try {
+    // ========================================
+    // 応募者一覧取得
+    // ========================================
+    if (req.method === "GET") {
+      const userId = String(req.query.userId ?? "").trim();
+      const jobId = String(req.query.jobId ?? "").trim();
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          message: "ユーザーIDがありません。",
+        });
+      }
+
+      const applications = jobId
+        ? await sql`
+            SELECT
+              a.id,
+              a.job_id,
+              a.name,
+              a.email,
+              a.phone,
+              a.message,
+              a.status,
+              a.source,
+              a.created_at,
+              j.public_id,
+              j.title,
+              j.ai_title,
+              j.company_name
+            FROM applications a
+            INNER JOIN jobs j
+              ON j.id = a.job_id
+            WHERE j.user_id = ${userId}
+              AND j.id = ${jobId}
+              AND j.status <> '9'
+            ORDER BY a.created_at DESC
+          `
+        : await sql`
+            SELECT
+              a.id,
+              a.job_id,
+              a.name,
+              a.email,
+              a.phone,
+              a.message,
+              a.status,
+              a.source,
+              a.created_at,
+              j.public_id,
+              j.title,
+              j.ai_title,
+              j.company_name
+            FROM applications a
+            INNER JOIN jobs j
+              ON j.id = a.job_id
+            WHERE j.user_id = ${userId}
+              AND j.status <> '9'
+            ORDER BY a.created_at DESC
+          `;
+
+      return res.status(200).json({
+        success: true,
+        applications,
+      });
+    }
+
+    // ========================================
+    // 応募保存
+    // ========================================
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+
+      return res.status(405).json({
+        success: false,
+        message: "Method Not Allowed",
+      });
+    }
+
     const { public_id, name, email, phone, message } = req.body ?? {};
 
     if (!public_id) {

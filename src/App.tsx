@@ -3,6 +3,7 @@ import liff from "@line/liff";
 import "./App.css";
 import PublishOptions from "./PublishOptions";
 import JobManagement from "./JobManagement";
+import ApplicantManagement from "./ApplicantManagement";
 import CompanyPage from "./CompanyPage";
 import PrivacyPage from "./PrivacyPage";
 import PublicJobList from "./PublicJobList";
@@ -520,13 +521,16 @@ function App() {
   /* 求人publishedID */
   const [publishedPublicId, setPublishedPublicId] = useState("");
 
-  type PageType = "create" | "jobs" | "edit";
+  type PageType = "create" | "jobs" | "edit" | "applicants";
 
   /* 現在のページ */
   const [currentPage, setCurrentPage] = useState<PageType>("create");
 
   /* 編集求人ID */
   const [editingJobId, setEditingJobId] = useState<number | null>(null);
+
+  /* 応募者を表示する求人ID */
+  const [applicantJobId, setApplicantJobId] = useState<number | null>(null);
 
   /* エラー */
   const [errorMessage, setErrorMessage] = useState("");
@@ -542,6 +546,16 @@ function App() {
 
     if (page === "jobs") {
       setCurrentPage("jobs");
+    } else if (page === "applicants") {
+      const jobId = params.get("jobId");
+      const parsedJobId = jobId ? Number(jobId) : null;
+
+      if (parsedJobId && Number.isFinite(parsedJobId)) {
+        setApplicantJobId(parsedJobId);
+        setCurrentPage("applicants");
+      } else {
+        setCurrentPage("jobs");
+      }
     } else {
       setCurrentPage("create");
     }
@@ -1342,6 +1356,22 @@ function App() {
     });
   };
 
+  if (currentPage === "applicants") {
+    return (
+      <ApplicantManagement
+        jobId={applicantJobId}
+        onBack={() => {
+          setApplicantJobId(null);
+          setCurrentPage("jobs");
+
+          const url = new URL(window.location.href);
+          url.searchParams.set("page", "jobs");
+          window.history.pushState({}, "", url.toString());
+        }}
+      />
+    );
+  }
+
   if (currentPage === "jobs") {
     return (
       <JobManagement
@@ -1361,6 +1391,15 @@ function App() {
           setEditingJobId(jobId);
 
           setCurrentPage("edit");
+        }}
+        onViewApplicants={(jobId) => {
+          setApplicantJobId(jobId);
+          setCurrentPage("applicants");
+
+          const url = new URL(window.location.href);
+          url.searchParams.set("page", "applicants");
+          url.searchParams.set("jobId", String(jobId));
+          window.history.pushState({}, "", url.toString());
         }}
       />
     );

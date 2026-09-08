@@ -31,9 +31,14 @@ type Job = {
 type Props = {
   onCreateJob: () => void;
   onEditJob: (jobId: number) => void;
+  onViewApplicants: (jobId: number) => void;
 };
 
-export default function JobManagement({ onCreateJob, onEditJob }: Props) {
+export default function JobManagement({
+  onCreateJob,
+  onEditJob,
+  onViewApplicants,
+}: Props) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -491,6 +496,23 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
                   >
                     ✏️ 編集
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onViewApplicants(job.id)}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      background: "#ffffff",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    👤 応募者
+                  </button>
+
                   <label className="publish-switch">
                     <input
                       type="checkbox"
