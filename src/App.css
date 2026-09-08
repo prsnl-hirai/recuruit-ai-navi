@@ -1351,17 +1351,28 @@ textarea {
 /* ========================================
    掲載終了日
 ======================================== */
-.form-group .valid-through-input {
-  display: block;
+
+.valid-through-group {
   width: 100%;
-  max-width: 100%;
   min-width: 0;
-  box-sizing: border-box;
-  margin-left: 0;
-  margin-right: 0;
+  overflow: hidden;
 }
 
-/* iPhone / Safari の date input 対策 */
-.valid-through-input::-webkit-date-and-time-value {
-  text-align: left;
+.valid-through-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  /* スマホの date input 対策 */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+@media (max-width: 700px) {
+  .valid-through-input {
+    width: 100%;
+    max-width: calc(100vw - 66px);
+  }
 }
