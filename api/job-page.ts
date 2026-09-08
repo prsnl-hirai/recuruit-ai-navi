@@ -133,6 +133,10 @@ export default async function handler(req: any, res: any) {
       FROM jobs
       WHERE public_id = ${publicId}
         AND status = '1'
+        AND (
+          valid_through IS NULL
+          OR valid_through >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+        )
       LIMIT 1
     `;
 
@@ -284,7 +288,7 @@ export default async function handler(req: any, res: any) {
       directApply: true,
 
       validThrough: job.valid_through
-        ? new Date(job.valid_through).toISOString()
+        ? String(job.valid_through).slice(0, 10)
         : undefined,
     };
 
