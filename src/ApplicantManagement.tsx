@@ -11,6 +11,12 @@ type Application = {
   message?: string;
   memo?: string;
 
+  interview_date?: string | null;
+  interview_time?: string | null;
+  interview_method?: string | null;
+  interview_location?: string | null;
+  interview_memo?: string | null;
+
   status?: string;
   source?: string;
 
@@ -21,13 +27,6 @@ type Application = {
   title?: string;
   ai_title?: string;
   company_name?: string;
-
-  // 面接情報
-  interview_date?: string | null;
-  interview_time?: string | null;
-  interview_method?: string | null;
-  interview_location?: string | null;
-  interview_memo?: string | null;
 };
 
 type Props = {
@@ -60,6 +59,8 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
   const [interviewLocation, setInterviewLocation] = useState("");
   const [interviewMemo, setInterviewMemo] = useState("");
   const [savingInterview, setSavingInterview] = useState(false);
+
+  const [statusFilter, setStatusFilter] = useState("all");
 
   /*
    * 応募者一覧取得
@@ -562,6 +563,47 @@ ${company}
     }
   };
 
+  const statusTabs = [
+    { value: "all", label: "すべて" },
+    { value: "0", label: "未対応" },
+    { value: "1", label: "連絡済み" },
+    { value: "2", label: "面接予定" },
+    { value: "3", label: "採用" },
+    { value: "4", label: "不採用" },
+  ];
+
+  const getStatusCount = (status: string) => {
+    if (status === "all") return applications.length;
+    return applications.filter(
+      (application) => String(application.status ?? "0") === status,
+    ).length;
+  };
+
+  const filteredApplications = useMemo(() => {
+    if (statusFilter === "all") return applications;
+
+    return applications.filter(
+      (application) => String(application.status ?? "0") === statusFilter,
+    );
+  }, [applications, statusFilter]);
+
+  const formatInterviewDate = (value?: string | null) => {
+    if (!value) return "";
+
+    const dateText = String(value).slice(0, 10);
+    const parts = dateText.split("-");
+    if (parts.length !== 3) return dateText;
+
+    const month = Number(parts[1]);
+    const day = Number(parts[2]);
+    return `${month}月${day}日`;
+  };
+
+  const formatInterviewTime = (value?: string | null) => {
+    if (!value) return "";
+    return String(value).slice(0, 5);
+  };
+
   const groupedApplications = useMemo(() => {
     if (jobId !== null) {
       return [];
@@ -577,7 +619,7 @@ ${company}
       }
     >();
 
-    applications.forEach((application) => {
+    filteredApplications.forEach((application) => {
       const current = map.get(application.job_id);
 
       if (current) {
@@ -594,7 +636,7 @@ ${company}
     });
 
     return Array.from(map.values());
-  }, [applications, jobId]);
+  }, [filteredApplications, jobId]);
 
   const renderApplicationCard = (application: Application) => {
     return (
@@ -646,6 +688,27 @@ ${company}
                   {formatDateTime(application.created_at)}
                 </div>
               )}
+
+              {String(application.status ?? "0") === "2" &&
+                application.interview_date && (
+                  <div
+                    style={{
+                      marginTop: "5px",
+                      padding: "8px 10px",
+                      background: "#eff6ff",
+                      borderRadius: "8px",
+                      color: "#1d4ed8",
+                      fontWeight: 700,
+                    }}
+                  >
+                    📅 面接：
+                    {formatInterviewDate(application.interview_date)}
+                    {application.interview_time &&
+                      ` ${formatInterviewTime(application.interview_time)}`}
+                    {application.interview_method &&
+                      ` ・${application.interview_method}`}
+                  </div>
+                )}
             </div>
           </div>
 
@@ -904,6 +967,43 @@ ${company}
           padding: "18px 12px 60px",
         }}
       >
+        {!loading && !errorMessage && applications.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              overflowX: "auto",
+              paddingBottom: "12px",
+              marginBottom: "4px",
+            }}
+          >
+            {statusTabs.map((tab) => {
+              const active = statusFilter === tab.value;
+
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.value)}
+                  style={{
+                    flexShrink: 0,
+                    padding: "8px 12px",
+                    border: active ? "1px solid #06c755" : "1px solid #d1d5db",
+                    borderRadius: "999px",
+                    background: active ? "#06c755" : "#ffffff",
+                    color: active ? "#ffffff" : "#374151",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {tab.label} {getStatusCount(tab.value)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {loading && (
           <div
             style={{
@@ -979,11 +1079,46 @@ ${company}
                   fontSize: "13px",
                 }}
               >
-                応募者 {applications.length}名
+                表示中 {filteredApplications.length}名 / 応募者{" "}
+                {applications.length}名
               </div>
 
-              {applications.map(renderApplicationCard)}
+              {filteredApplications.length > 0 ? (
+                filteredApplications.map(renderApplicationCard)
+              ) : (
+                <div
+                  style={{
+                    padding: "28px 16px",
+                    background: "#ffffff",
+                    borderRadius: "12px",
+                    textAlign: "center",
+                    color: "#6b7280",
+                    fontSize: "13px",
+                  }}
+                >
+                  このステータスの応募者はいません
+                </div>
+              )}
             </>
+          )}
+
+        {!loading &&
+          !errorMessage &&
+          jobId === null &&
+          applications.length > 0 &&
+          groupedApplications.length === 0 && (
+            <div
+              style={{
+                padding: "28px 16px",
+                background: "#ffffff",
+                borderRadius: "12px",
+                textAlign: "center",
+                color: "#6b7280",
+                fontSize: "13px",
+              }}
+            >
+              このステータスの応募者はいません
+            </div>
           )}
 
         {!loading &&
@@ -1176,9 +1311,11 @@ ${company}
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(140px, 1fr))",
                       gap: "10px",
                       marginTop: "10px",
+                      width: "100%",
                     }}
                   >
                     <label style={{ fontSize: "13px", fontWeight: 700 }}>
