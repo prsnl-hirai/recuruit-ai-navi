@@ -1448,8 +1448,6 @@ function App() {
                 left: 0,
                 top: "50%",
                 transform: "translateY(-50%)",
-                border: "1px solid #dbe3ee",
-                borderRadius: "8px",
                 background: "#ffffff",
                 padding: "8px 10px",
                 color: "#2563eb",

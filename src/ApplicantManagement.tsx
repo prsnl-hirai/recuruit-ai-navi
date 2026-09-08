@@ -9,6 +9,7 @@ type Application = {
   email?: string;
   phone?: string;
   message?: string;
+  memo?: string;
 
   status?: string;
   source?: string;
@@ -38,6 +39,8 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
     useState<Application | null>(null);
 
   const [savingStatusId, setSavingStatusId] = useState<number | null>(null);
+  const [memoDraft, setMemoDraft] = useState("");
+  const [savingMemo, setSavingMemo] = useState(false);
 
   /*
    * 応募者一覧取得
@@ -215,6 +218,70 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
       );
     } finally {
       setSavingStatusId(null);
+    }
+  };
+
+  const handleMemoSave = async () => {
+    if (!selectedApplication) {
+      return;
+    }
+
+    try {
+      setSavingMemo(true);
+      setErrorMessage("");
+
+      let userId = "";
+
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+      }
+
+      if (!userId) {
+        throw new Error("LINEユーザー情報を取得できませんでした。");
+      }
+
+      const response = await fetch("/api/applications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: selectedApplication.id,
+          userId,
+          memo: memoDraft,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "採用メモを保存できませんでした。");
+      }
+
+      setApplications((prev) =>
+        prev.map((item) =>
+          item.id === selectedApplication.id
+            ? { ...item, memo: memoDraft }
+            : item,
+        ),
+      );
+
+      setSelectedApplication((prev) =>
+        prev ? { ...prev, memo: memoDraft } : prev,
+      );
+
+      alert("採用メモを保存しました。");
+    } catch (error) {
+      console.error("採用メモ保存エラー:", error);
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "採用メモを保存できませんでした。",
+      );
+    } finally {
+      setSavingMemo(false);
     }
   };
 
@@ -429,7 +496,10 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
 
           <button
             type="button"
-            onClick={() => setSelectedApplication(application)}
+            onClick={() => {
+              setSelectedApplication(application);
+              setMemoDraft(application.memo ?? "");
+            }}
             style={{
               flex: 1,
               padding: "10px",
@@ -821,6 +891,64 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
                   </div>
                 </div>
               )}
+
+              <div>
+                <strong>📝 採用メモ</strong>
+
+                <textarea
+                  value={memoDraft}
+                  onChange={(e) => setMemoDraft(e.target.value)}
+                  maxLength={5000}
+                  rows={6}
+                  placeholder={
+                    "例：\n9/8 電話連絡済み\n9/10 14:00 面接予定\n接客経験3年あり"
+                  }
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    marginTop: "7px",
+                    padding: "11px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "8px",
+                    background: "#ffffff",
+                    color: "#374151",
+                    fontSize: "14px",
+                    lineHeight: 1.6,
+                    resize: "vertical",
+                  }}
+                />
+
+                <div
+                  style={{
+                    marginTop: "5px",
+                    color: "#9ca3af",
+                    fontSize: "11px",
+                    textAlign: "right",
+                  }}
+                >
+                  {memoDraft.length} / 5000
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleMemoSave}
+                  disabled={savingMemo}
+                  style={{
+                    width: "100%",
+                    marginTop: "8px",
+                    padding: "11px",
+                    border: "none",
+                    borderRadius: "8px",
+                    background: savingMemo ? "#9ca3af" : "#06c755",
+                    color: "#ffffff",
+                    fontWeight: 700,
+                    cursor: savingMemo ? "wait" : "pointer",
+                  }}
+                >
+                  {savingMemo ? "保存中..." : "💾 採用メモを保存"}
+                </button>
+              </div>
             </div>
 
             <button
