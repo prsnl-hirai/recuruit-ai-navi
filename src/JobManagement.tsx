@@ -151,6 +151,7 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          action: "toggle-status",
           id: job.id,
           status: newStatus,
         }),
@@ -168,6 +169,7 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
             ? {
                 ...item,
                 status: newStatus,
+                public_id: data.job?.public_id ?? item.public_id,
               }
             : item,
         ),
@@ -175,7 +177,11 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
     } catch (error) {
       console.error("公開状態変更エラー:", error);
 
-      alert("公開状態を変更できませんでした。");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "公開状態を変更できませんでした。",
+      );
     }
   };
 
