@@ -572,20 +572,92 @@ ${company}
     { value: "4", label: "不採用" },
   ];
 
+  const getLocalDateString = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const getInterviewDateString = (value?: string | null) => {
+    if (!value) return "";
+    return String(value).slice(0, 10);
+  };
+
+  const isInterviewScheduled = (application: Application) =>
+    String(application.status ?? "0") === "2" && !!application.interview_date;
+
+  const todayDateString = getLocalDateString();
+
+  const todayInterviewCount = applications.filter(
+    (application) =>
+      isInterviewScheduled(application) &&
+      getInterviewDateString(application.interview_date) === todayDateString,
+  ).length;
+
+  const upcomingInterviewCount = applications.filter(
+    (application) =>
+      isInterviewScheduled(application) &&
+      getInterviewDateString(application.interview_date) > todayDateString,
+  ).length;
+
   const getStatusCount = (status: string) => {
     if (status === "all") return applications.length;
+
     return applications.filter(
       (application) => String(application.status ?? "0") === status,
     ).length;
   };
 
-  const filteredApplications = useMemo(() => {
-    if (statusFilter === "all") return applications;
+  const getInterviewSortValue = (application: Application) => {
+    const date = getInterviewDateString(application.interview_date);
 
-    return applications.filter(
-      (application) => String(application.status ?? "0") === statusFilter,
-    );
-  }, [applications, statusFilter]);
+    if (!date) {
+      return "9999-12-31T23:59";
+    }
+
+    const time = application.interview_time
+      ? String(application.interview_time).slice(0, 5)
+      : "23:59";
+
+    return `${date}T${time}`;
+  };
+
+  const filteredApplications = useMemo(() => {
+    let result = [...applications];
+
+    if (statusFilter === "today") {
+      result = result.filter(
+        (application) =>
+          isInterviewScheduled(application) &&
+          getInterviewDateString(application.interview_date) ===
+            todayDateString,
+      );
+    } else if (statusFilter === "upcoming") {
+      result = result.filter(
+        (application) =>
+          isInterviewScheduled(application) &&
+          getInterviewDateString(application.interview_date) > todayDateString,
+      );
+    } else if (statusFilter !== "all") {
+      result = result.filter(
+        (application) => String(application.status ?? "0") === statusFilter,
+      );
+    }
+
+    if (
+      statusFilter === "today" ||
+      statusFilter === "upcoming" ||
+      statusFilter === "2"
+    ) {
+      result.sort((a, b) =>
+        getInterviewSortValue(a).localeCompare(getInterviewSortValue(b)),
+      );
+    }
+
+    return result;
+  }, [applications, statusFilter, todayDateString]);
 
   const formatInterviewDate = (value?: string | null) => {
     if (!value) return "";
@@ -970,6 +1042,107 @@ ${company}
         {!loading && !errorMessage && applications.length > 0 && (
           <div
             style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: "10px",
+              marginBottom: "14px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setStatusFilter("today")}
+              style={{
+                minWidth: 0,
+                padding: "14px 12px",
+                border:
+                  statusFilter === "today"
+                    ? "2px solid #2563eb"
+                    : "1px solid #bfdbfe",
+                borderRadius: "12px",
+                background: statusFilter === "today" ? "#dbeafe" : "#eff6ff",
+                color: "#1e3a8a",
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 700,
+                }}
+              >
+                📅 今日の面接
+              </div>
+              <div
+                style={{
+                  marginTop: "4px",
+                  fontSize: "22px",
+                  fontWeight: 800,
+                }}
+              >
+                {todayInterviewCount}
+                <span
+                  style={{
+                    marginLeft: "3px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                  }}
+                >
+                  件
+                </span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStatusFilter("upcoming")}
+              style={{
+                minWidth: 0,
+                padding: "14px 12px",
+                border:
+                  statusFilter === "upcoming"
+                    ? "2px solid #7c3aed"
+                    : "1px solid #ddd6fe",
+                borderRadius: "12px",
+                background: statusFilter === "upcoming" ? "#ede9fe" : "#f5f3ff",
+                color: "#5b21b6",
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 700,
+                }}
+              >
+                🗓 今後の面接
+              </div>
+              <div
+                style={{
+                  marginTop: "4px",
+                  fontSize: "22px",
+                  fontWeight: 800,
+                }}
+              >
+                {upcomingInterviewCount}
+                <span
+                  style={{
+                    marginLeft: "3px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                  }}
+                >
+                  件
+                </span>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {!loading && !errorMessage && applications.length > 0 && (
+          <div
+            style={{
               display: "flex",
               gap: "8px",
               overflowX: "auto",
@@ -1096,7 +1269,11 @@ ${company}
                     fontSize: "13px",
                   }}
                 >
-                  このステータスの応募者はいません
+                  {statusFilter === "today"
+                    ? "今日の面接予定はありません"
+                    : statusFilter === "upcoming"
+                      ? "今後の面接予定はありません"
+                      : "このステータスの応募者はいません"}
                 </div>
               )}
             </>
@@ -1117,7 +1294,11 @@ ${company}
                 fontSize: "13px",
               }}
             >
-              このステータスの応募者はいません
+              {statusFilter === "today"
+                ? "今日の面接予定はありません"
+                : statusFilter === "upcoming"
+                  ? "今後の面接予定はありません"
+                  : "このステータスの応募者はいません"}
             </div>
           )}
 
@@ -1311,11 +1492,9 @@ ${company}
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fit, minmax(140px, 1fr))",
+                      gridTemplateColumns: "1fr 1fr",
                       gap: "10px",
                       marginTop: "10px",
-                      width: "100%",
                     }}
                   >
                     <label style={{ fontSize: "13px", fontWeight: 700 }}>

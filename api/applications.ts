@@ -5,6 +5,135 @@ const sql = neon(process.env.DATABASE_URL!);
 export default async function handler(req: any, res: any) {
   try {
     // ========================================
+    // 面接リマインド通知（Vercel Cron）
+    // /api/applications?cron=interview-reminders
+    // ========================================
+    if (
+      req.method === "GET" &&
+      String(req.query.cron ?? "") === "interview-reminders"
+    ) {
+      const cronSecret = process.env.CRON_SECRET;
+      const authHeader = String(req.headers.authorization ?? "");
+
+      if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const rows = await sql`
+        SELECT
+          a.id,
+          a.name,
+          a.interview_date,
+          a.interview_time,
+          a.interview_method,
+          a.interview_location,
+          a.interview_reminder_day_before_sent_at,
+          a.interview_reminder_today_sent_at,
+          j.user_id,
+          j.ai_title,
+          j.title,
+          j.company_name
+        FROM applications a
+        INNER JOIN jobs j
+          ON j.id = a.job_id
+        WHERE a.status = '2'
+          AND a.interview_date IS NOT NULL
+          AND j.status <> '9'
+          AND a.interview_date IN (
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date,
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date + 1
+          )
+        ORDER BY a.interview_date, a.interview_time NULLS LAST
+      `;
+
+      let sentCount = 0;
+      let skippedCount = 0;
+      let failedCount = 0;
+
+      const today = await sql`
+        SELECT
+          (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date::text AS today
+      `;
+      const todayString = String(today[0]?.today ?? "");
+
+      for (const application of rows) {
+        const interviewDate = String(application.interview_date ?? "").slice(
+          0,
+          10,
+        );
+        const isToday = interviewDate === todayString;
+        const alreadySent = isToday
+          ? application.interview_reminder_today_sent_at
+          : application.interview_reminder_day_before_sent_at;
+
+        if (alreadySent || !application.user_id) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const title = application.ai_title || application.title || "求人";
+        const interviewTime = application.interview_time
+          ? String(application.interview_time).slice(0, 5)
+          : "時間未設定";
+
+        const message = [
+          isToday ? "📅 本日の面接予定です" : "📅 明日の面接予定です",
+          "",
+          `求人：${title}`,
+          `応募者：${application.name || "氏名未設定"}`,
+          `日時：${interviewDate} ${interviewTime}`,
+          application.interview_method
+            ? `方法：${application.interview_method}`
+            : "",
+          application.interview_location
+            ? `場所：${application.interview_location}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        const sent = await sendLineNotification(
+          String(application.user_id),
+          message,
+        );
+
+        if (!sent) {
+          failedCount += 1;
+          continue;
+        }
+
+        if (isToday) {
+          await sql`
+            UPDATE applications
+            SET interview_reminder_today_sent_at = CURRENT_TIMESTAMP
+            WHERE id = ${application.id}
+              AND interview_reminder_today_sent_at IS NULL
+          `;
+        } else {
+          await sql`
+            UPDATE applications
+            SET interview_reminder_day_before_sent_at = CURRENT_TIMESTAMP
+            WHERE id = ${application.id}
+              AND interview_reminder_day_before_sent_at IS NULL
+          `;
+        }
+
+        sentCount += 1;
+      }
+
+      return res.status(200).json({
+        success: true,
+        checkedCount: rows.length,
+        sentCount,
+        skippedCount,
+        failedCount,
+      });
+    }
+
+    // ========================================
     // 応募者一覧取得
     // ========================================
     if (req.method === "GET") {
@@ -254,7 +383,9 @@ export default async function handler(req: any, res: any) {
             interview_time = ${interviewTime},
             interview_method = ${interviewMethod},
             interview_location = ${interviewLocation},
-            interview_memo = ${interviewMemo}
+            interview_memo = ${interviewMemo},
+            interview_reminder_day_before_sent_at = NULL,
+            interview_reminder_today_sent_at = NULL
           FROM jobs AS j
           WHERE a.id = ${applicationId}
             AND a.job_id = j.id
@@ -505,7 +636,7 @@ async function sendLineNotification(userId: string, message: string) {
 
   if (!token) {
     console.error("LINE_CHANNEL_ACCESS_TOKEN is not set");
-    return;
+    return false;
   }
 
   const response = await fetch("https://api.line.me/v2/bot/message/push", {
@@ -528,5 +659,8 @@ async function sendLineNotification(userId: string, message: string) {
   if (!response.ok) {
     const text = await response.text();
     console.error("LINE push error:", response.status, text);
+    return false;
   }
+
+  return true;
 }
