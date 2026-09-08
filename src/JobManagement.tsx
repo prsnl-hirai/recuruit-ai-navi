@@ -558,7 +558,7 @@ export default function JobManagement({
                       cursor: "pointer",
                     }}
                   >
-                    👤 応募者を見る
+                    👤 応募者
                   </button>
 
                   <label className="publish-switch">
@@ -581,9 +581,17 @@ export default function JobManagement({
                 </div>
 
                 {job.status === "1" && job.public_id && (
-                  <button onClick={() => openPublicJob(job.public_id!)}>
-                    🌐 公開ページ
-                  </button>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      marginTop: "16px",
+                    }}
+                  >
+                    <button onClick={() => openPublicJob(job.public_id!)}>
+                      🌐 公開ページ
+                    </button>
+                  </div>
                 )}
               </article>
             );
