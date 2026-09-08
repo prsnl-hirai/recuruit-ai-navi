@@ -2031,22 +2031,6 @@ function App() {
               ))}
             </div>
           </div>
-
-          {/* 掲載終了日 */}
-          <div className="form-group">
-            <label>掲載終了日</label>
-
-            <input
-              type="date"
-              value={form.validThrough}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  validThrough: e.target.value,
-                }))
-              }
-            />
-          </div>
         </section>
 
         {/* ==================================
@@ -2391,6 +2375,33 @@ function App() {
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        {/* ==================================
+            公開設定
+        ================================== */}
+        <section className="card">
+          <div className="section-title">
+            <span>📅</span>
+            <h2>公開設定</h2>
+          </div>
+
+          <div className="form-group">
+            <label>掲載終了日</label>
+
+            <input
+              type="date"
+              value={form.validThrough}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  validThrough: e.target.value,
+                }))
+              }
+            />
+
+            <p className="help-text">指定した日まで求人を掲載します。</p>
           </div>
         </section>
 
