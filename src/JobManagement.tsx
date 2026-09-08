@@ -581,17 +581,24 @@ export default function JobManagement({
                 </div>
 
                 {job.status === "1" && job.public_id && (
-                  <div
+                  <button
+                    type="button"
+                    onClick={() => openPublicJob(job.public_id!)}
                     style={{
-                      display: "flex",
-                      gap: "8px",
-                      marginTop: "16px",
+                      width: "100%",
+                      marginTop: "10px",
+                      padding: "11px 14px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      background: "#ffffff",
+                      color: "#374151",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      cursor: "pointer",
                     }}
                   >
-                    <button onClick={() => openPublicJob(job.public_id!)}>
-                      🌐 公開ページ
-                    </button>
-                  </div>
+                    🌐 公開ページを見る
+                  </button>
                 )}
               </article>
             );
