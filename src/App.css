@@ -1300,3 +1300,50 @@ textarea {
   background: #f3f4f6;
   color: #111827;
 }
+
+.back-to-jobs-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  margin-bottom: 16px;
+  padding: 8px 12px;
+
+  border: none;
+  background: transparent;
+
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+
+  cursor: pointer;
+}
+
+.back-to-jobs-button:hover {
+  color: #111;
+}
+
+/* ========================================
+   戻るボタン
+======================================== */
+.back-to-jobs-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  margin-bottom: 16px;
+  padding: 8px 12px;
+
+  border: none;
+  background: transparent;
+
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+
+  cursor: pointer;
+}
+
+.back-to-jobs-button:hover {
+  color: #111;
+}

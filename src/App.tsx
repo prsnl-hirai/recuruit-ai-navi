@@ -1083,21 +1083,13 @@ function App() {
         setSavedJobId(Number(data.job.id));
 
         if (status === "0") {
-          alert("求人を下書き保存しました。");
-        }
+          alert("求人を保存しました。");
+          setEditingJobId(null);
+          setCurrentPage("jobs");
 
-        if (status === "1") {
-          const publicId = data.job?.publicId ?? data.job?.public_id ?? "";
-
-          if (publicId) {
-            setPublishedPublicId(publicId);
-
-            const publicUrl = `${window.location.origin}/jobs/${publicId}`;
-
-            alert(`求人を公開しました。\n\n${publicUrl}`);
-          } else {
-            alert("求人を公開しましたが、公開URLを取得できませんでした。");
-          }
+          const url = new URL(window.location.href);
+          url.searchParams.set("page", "jobs");
+          window.history.pushState({}, "", url.toString());
         }
       }
     } catch (error: any) {
@@ -1347,6 +1339,24 @@ function App() {
           </div>
         </div>
       </header>
+
+      <button
+        type="button"
+        className="back-to-jobs-button"
+        onClick={() => {
+          setEditingJobId(null);
+          setResult(null);
+          setErrorMessage("");
+          setCurrentPage("jobs");
+
+          // URLも求人一覧に合わせる
+          const url = new URL(window.location.href);
+          url.searchParams.set("page", "jobs");
+          window.history.pushState({}, "", url.toString());
+        }}
+      >
+        ← 求人一覧に戻る
+      </button>
 
       {/* ====================================
           Intro
@@ -2577,7 +2587,12 @@ function App() {
                 作り直す
               </button>
 
-              <button onClick={() => handleSaveJob("0")} disabled={saving}>
+              <button
+                type="button"
+                className="save-button"
+                onClick={() => handleSaveJob("0")}
+                disabled={saving}
+              >
                 {saving ? "保存中..." : "💾保存"}
               </button>
             </div>
