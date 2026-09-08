@@ -1429,38 +1429,57 @@ function App() {
   return (
     <>
       <header className="header">
-        <div className="header-inner">
-          <div className="logo">
-            <div className="logo-icon">🤖</div>
+        <div
+          style={{
+            maxWidth: "700px",
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
+          {/* {currentPage === "edit" && editingJobId !== null && ( */}
+          <button
+            type="button"
+            style={{
+              border: "none",
+              background: "transparent",
+              padding: "6px 0",
+              color: "#2563eb",
+              fontSize: "14px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              setEditingJobId(null);
+              setResult(null);
+              setErrorMessage("");
+              setCurrentPage("jobs");
 
-            <div>
-              <div className="logo-title">求人AIナビ</div>
+              // URLも求人一覧に合わせる
+              const url = new URL(window.location.href);
+              url.searchParams.set("page", "jobs");
+              window.history.pushState({}, "", url.toString());
+            }}
+          >
+            ← 求人一覧に戻る
+          </button>
+          {/* )} */}
+          <div className="header-inner">
+            <div className="logo">
+              <div className="logo-icon">🤖</div>
 
-              <div className="logo-subtitle">AIで応募されやすい求人を作成</div>
+              <div>
+                <div className="logo-title">求人AIナビ</div>
+
+                <div className="logo-subtitle">
+                  AIで応募されやすい求人を作成
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </header>
-
-      {currentPage === "edit" && editingJobId !== null && (
-        <button
-          type="button"
-          className="back-to-jobs-button"
-          onClick={() => {
-            setEditingJobId(null);
-            setResult(null);
-            setErrorMessage("");
-            setCurrentPage("jobs");
-
-            // URLも求人一覧に合わせる
-            const url = new URL(window.location.href);
-            url.searchParams.set("page", "jobs");
-            window.history.pushState({}, "", url.toString());
-          }}
-        >
-          ← 求人一覧に戻る
-        </button>
-      )}
 
       {/* ====================================
           Intro
