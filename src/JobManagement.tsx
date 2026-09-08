@@ -45,16 +45,20 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
       setLoading(true);
       setErrorMessage("");
 
-      if (!liff.isLoggedIn()) {
-        throw new Error("LINEにログインしていません。");
+      let userId = "";
+
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+
+        userId = profile.userId;
       }
 
-      const profile = await liff.getProfile();
-
-      console.log("求人管理 LINE userId:", profile.userId);
+      if (!userId) {
+        throw new Error("LINEユーザー情報を取得できませんでした。");
+      }
 
       const response = await fetch(
-        `/api/job-list?userId=${encodeURIComponent(profile.userId)}`,
+        `/api/job-list?userId=${encodeURIComponent(userId)}`,
       );
 
       const data = await response.json();
@@ -63,9 +67,7 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
         throw new Error(data.message || "求人一覧を取得できませんでした。");
       }
 
-      console.log("求人一覧:", data.jobs);
-
-      setJobs(data.jobs ?? []);
+      setJobs(Array.isArray(data.jobs) ? data.jobs : []);
     } catch (error) {
       console.error("求人一覧取得エラー:", error);
 
@@ -78,6 +80,7 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     loadJobs();
   }, []);

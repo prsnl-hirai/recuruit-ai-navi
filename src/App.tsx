@@ -1,4 +1,4 @@
-import { useLayoutEffect, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import "./App.css";
 import PublishOptions from "./PublishOptions";
@@ -503,7 +503,7 @@ function App() {
      URLチェック
   ======================================== */
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
     const page = params.get("page");
