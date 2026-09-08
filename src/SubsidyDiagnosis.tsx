@@ -235,6 +235,19 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showResult, setShowResult] = useState(false);
+  const [showConsultation, setShowConsultation] = useState(false);
+  const [consultationSending, setConsultationSending] = useState(false);
+  const [consultationDone, setConsultationDone] = useState(false);
+  const [consultationError, setConsultationError] = useState("");
+  const [consultationForm, setConsultationForm] = useState({
+    companyName: "",
+    contactName: "",
+    email: "",
+    phone: "",
+    prefecture: "",
+    message: "",
+    consent: false,
+  });
 
   useEffect(() => {
     const loadMaster = async () => {
@@ -477,7 +490,72 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
   const reset = () => {
     setAnswers({});
     setShowResult(false);
+    setShowConsultation(false);
+    setConsultationDone(false);
+    setConsultationError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const submitConsultation = async () => {
+    if (
+      !consultationForm.companyName.trim() ||
+      !consultationForm.contactName.trim() ||
+      !consultationForm.email.trim() ||
+      !consultationForm.prefecture.trim()
+    ) {
+      setConsultationError(
+        "会社名・担当者名・メールアドレス・都道府県を入力してください",
+      );
+      return;
+    }
+
+    if (!consultationForm.consent) {
+      setConsultationError("専門家への情報提供に同意してください");
+      return;
+    }
+
+    try {
+      setConsultationSending(true);
+      setConsultationError("");
+
+      const response = await fetch("/api/job-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "subsidy-consultation",
+          fiscalYear: FISCAL_YEAR,
+          companyName: consultationForm.companyName.trim(),
+          contactName: consultationForm.contactName.trim(),
+          email: consultationForm.email.trim(),
+          phone: consultationForm.phone.trim(),
+          prefecture: consultationForm.prefecture.trim(),
+          consultationMessage: consultationForm.message.trim(),
+          answers,
+          subsidyIds: candidates.map((item) => item.subsidy.id),
+          results: candidates.map((item) => ({
+            subsidyId: item.subsidy.id,
+            matchLevel: item.matchLevel,
+            score: item.score,
+            reasons: item.reasons,
+            checks: item.checks,
+          })),
+          consentToShare: consultationForm.consent,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "相談申込みに失敗しました");
+      }
+
+      setConsultationDone(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e: any) {
+      setConsultationError(e?.message || "相談申込みに失敗しました");
+    } finally {
+      setConsultationSending(false);
+    }
   };
 
   const renderQuestion = (question: Question) => {
@@ -873,6 +951,223 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
                 )}
               </article>
             ))
+          )}
+
+          {!showConsultation && !consultationDone && candidates.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowConsultation(true);
+                setConsultationError("");
+              }}
+              style={{
+                width: "100%",
+                marginTop: "6px",
+                marginBottom: "10px",
+                padding: "14px",
+                border: "none",
+                borderRadius: "12px",
+                background: "#06c755",
+                color: "#fff",
+                fontSize: "15px",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              👨‍💼 専門家に相談する
+            </button>
+          )}
+
+          {showConsultation && !consultationDone && (
+            <section
+              style={{
+                marginTop: "8px",
+                marginBottom: "14px",
+                padding: "18px",
+                background: "#fff",
+                border: "1px solid #d1fae5",
+                borderRadius: "14px",
+              }}
+            >
+              <div style={{ fontSize: "17px", fontWeight: 800 }}>
+                👨‍💼 専門家への相談申込み
+              </div>
+              <div
+                style={{
+                  marginTop: "6px",
+                  color: "#6b7280",
+                  fontSize: "12px",
+                  lineHeight: 1.6,
+                }}
+              >
+                診断結果を引き継いで、相談内容に応じた社会保険労務士または専門家への相談を受け付けます。
+              </div>
+
+              {[
+                ["companyName", "会社名", "株式会社○○"],
+                ["contactName", "担当者名", "山田 太郎"],
+                ["email", "メールアドレス", "example@example.com"],
+                ["phone", "電話番号（任意）", "090-1234-5678"],
+                ["prefecture", "都道府県", "愛知県"],
+              ].map(([key, label, placeholder]) => (
+                <label
+                  key={key}
+                  style={{ display: "block", marginTop: "12px" }}
+                >
+                  <div
+                    style={{
+                      marginBottom: "5px",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                    }}
+                  >
+                    {label}
+                  </div>
+                  <input
+                    type={
+                      key === "email"
+                        ? "email"
+                        : key === "phone"
+                          ? "tel"
+                          : "text"
+                    }
+                    value={String(
+                      consultationForm[key as keyof typeof consultationForm] ??
+                        "",
+                    )}
+                    onChange={(e) =>
+                      setConsultationForm((prev) => ({
+                        ...prev,
+                        [key]: e.target.value,
+                      }))
+                    }
+                    placeholder={placeholder}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      padding: "11px 12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "10px",
+                      fontSize: "14px",
+                    }}
+                  />
+                </label>
+              ))}
+
+              <label style={{ display: "block", marginTop: "12px" }}>
+                <div
+                  style={{
+                    marginBottom: "5px",
+                    fontSize: "12px",
+                    fontWeight: 800,
+                  }}
+                >
+                  相談内容（任意）
+                </div>
+                <textarea
+                  value={consultationForm.message}
+                  onChange={(e) =>
+                    setConsultationForm((prev) => ({
+                      ...prev,
+                      message: e.target.value,
+                    }))
+                  }
+                  placeholder="例：キャリアアップ助成金について詳しく相談したい"
+                  rows={4}
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "11px 12px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    resize: "vertical",
+                  }}
+                />
+              </label>
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "8px",
+                  marginTop: "14px",
+                  padding: "12px",
+                  background: "#f9fafb",
+                  borderRadius: "10px",
+                  fontSize: "11px",
+                  lineHeight: 1.6,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={consultationForm.consent}
+                  onChange={(e) =>
+                    setConsultationForm((prev) => ({
+                      ...prev,
+                      consent: e.target.checked,
+                    }))
+                  }
+                  style={{ marginTop: "3px" }}
+                />
+                <span>
+                  診断結果および入力した会社・連絡先情報を、相談対応のため提携する社会保険労務士または専門家へ提供することに同意します。
+                </span>
+              </label>
+
+              {consultationError && (
+                <div
+                  style={{
+                    marginTop: "10px",
+                    color: "#dc2626",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                  }}
+                >
+                  {consultationError}
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={consultationSending}
+                onClick={submitConsultation}
+                style={{
+                  width: "100%",
+                  marginTop: "14px",
+                  padding: "13px",
+                  border: "none",
+                  borderRadius: "12px",
+                  background: consultationSending ? "#9ca3af" : "#06c755",
+                  color: "#fff",
+                  fontWeight: 800,
+                  cursor: consultationSending ? "not-allowed" : "pointer",
+                }}
+              >
+                {consultationSending ? "送信中..." : "専門家に相談を申し込む"}
+              </button>
+            </section>
+          )}
+
+          {consultationDone && (
+            <div
+              style={{
+                marginBottom: "14px",
+                padding: "18px",
+                background: "#ecfdf3",
+                border: "1px solid #a7f3d0",
+                borderRadius: "14px",
+                color: "#065f46",
+                lineHeight: 1.7,
+              }}
+            >
+              <div style={{ fontSize: "16px", fontWeight: 800 }}>
+                相談申込みを受け付けました
+              </div>
+              <div style={{ marginTop: "5px", fontSize: "12px" }}>
+                診断結果と相談内容を保存しました。担当者が内容を確認します。
+              </div>
+            </div>
           )}
 
           <button

@@ -127,6 +127,168 @@ export default async function handler(req: any, res: any) {
     }
 
     // =========================================================
+    // 助成金診断 → 専門家相談申込み
+    // =========================================================
+    if (action === "subsidy-consultation") {
+      if (!process.env.DATABASE_URL) {
+        throw new Error("DATABASE_URLが設定されていません");
+      }
+
+      const sql = neon(process.env.DATABASE_URL);
+      const {
+        companyName,
+        contactName,
+        email,
+        phone,
+        prefecture,
+        consultationMessage,
+        answers,
+        subsidyIds,
+        results,
+        consentToShare,
+      } = req.body ?? {};
+
+      if (!companyName || !contactName || !email || !prefecture) {
+        return res.status(400).json({
+          success: false,
+          message: "会社名・担当者名・メールアドレス・都道府県は必須です",
+        });
+      }
+
+      if (consentToShare !== true) {
+        return res.status(400).json({
+          success: false,
+          message: "専門家への情報提供同意が必要です",
+        });
+      }
+
+      const answerObject =
+        answers && typeof answers === "object" && !Array.isArray(answers)
+          ? answers
+          : {};
+
+      const employeeCount = Number(answerObject.employee_count);
+      const capital = Number(answerObject.capital);
+      const industry =
+        typeof answerObject.industry === "string"
+          ? answerObject.industry
+          : null;
+
+      const diagnosisRows = await sql`
+        INSERT INTO subsidy_diagnoses (
+          company_name,
+          contact_name,
+          industry,
+          employee_count,
+          capital,
+          answers,
+          status
+        )
+        VALUES (
+          ${String(companyName).trim()},
+          ${String(contactName).trim()},
+          ${industry},
+          ${Number.isFinite(employeeCount) ? employeeCount : null},
+          ${Number.isFinite(capital) ? capital : null},
+          ${JSON.stringify(answerObject)}::jsonb,
+          'completed'
+        )
+        RETURNING id
+      `;
+
+      const diagnosisId = Number(diagnosisRows[0].id);
+
+      const safeResults = Array.isArray(results) ? results : [];
+      for (const result of safeResults) {
+        const subsidyId = Number(result?.subsidyId);
+        if (!Number.isInteger(subsidyId) || subsidyId <= 0) continue;
+
+        await sql`
+          INSERT INTO subsidy_diagnosis_results (
+            diagnosis_id,
+            subsidy_id,
+            match_level,
+            score,
+            matched_reasons,
+            required_checks
+          )
+          VALUES (
+            ${diagnosisId},
+            ${subsidyId},
+            ${String(result?.matchLevel ?? "medium")},
+            ${Number(result?.score ?? 0)},
+            ${JSON.stringify(Array.isArray(result?.reasons) ? result.reasons : [])}::jsonb,
+            ${JSON.stringify(Array.isArray(result?.checks) ? result.checks : [])}::jsonb
+          )
+          ON CONFLICT (diagnosis_id, subsidy_id)
+          DO NOTHING
+        `;
+      }
+
+      const consultationRows = await sql`
+        INSERT INTO consultation_requests (
+          diagnosis_id,
+          company_name,
+          contact_name,
+          email,
+          phone,
+          prefecture,
+          consultation_type,
+          consultation_message,
+          status,
+          consent_to_share,
+          consented_at
+        )
+        VALUES (
+          ${diagnosisId},
+          ${String(companyName).trim()},
+          ${String(contactName).trim()},
+          ${String(email).trim()},
+          ${phone ? String(phone).trim() : null},
+          ${String(prefecture).trim()},
+          'subsidy',
+          ${consultationMessage ? String(consultationMessage).trim() : null},
+          'new',
+          TRUE,
+          CURRENT_TIMESTAMP
+        )
+        RETURNING id
+      `;
+
+      const consultationId = Number(consultationRows[0].id);
+      const ids = Array.isArray(subsidyIds)
+        ? [
+            ...new Set(
+              subsidyIds
+                .map(Number)
+                .filter((id) => Number.isInteger(id) && id > 0),
+            ),
+          ]
+        : [];
+
+      for (const subsidyId of ids) {
+        await sql`
+          INSERT INTO consultation_subsidies (
+            consultation_id,
+            subsidy_id
+          )
+          VALUES (
+            ${consultationId},
+            ${subsidyId}
+          )
+          ON CONFLICT (consultation_id, subsidy_id)
+          DO NOTHING
+        `;
+      }
+
+      return res.status(200).json({
+        success: true,
+        diagnosisId,
+        consultationId,
+      });
+    }
+
+    // =========================================================
     // 従来の仕事内容候補生成
     // =========================================================
     if (!process.env.OPENAI_API_KEY) {
