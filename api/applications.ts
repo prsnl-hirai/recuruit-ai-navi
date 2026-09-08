@@ -97,6 +97,114 @@ export default async function handler(req: any, res: any) {
       }
 
       // ----------------------------------------
+      // 応募者へメール送信
+      // ----------------------------------------
+      if (action === "send-email") {
+        const subject = String(req.body?.subject ?? "").trim();
+        const body = String(req.body?.body ?? "").trim();
+
+        if (!subject) {
+          return res.status(400).json({
+            success: false,
+            message: "メール件名を入力してください。",
+          });
+        }
+
+        if (!body) {
+          return res.status(400).json({
+            success: false,
+            message: "メール本文を入力してください。",
+          });
+        }
+
+        if (subject.length > 200 || body.length > 10000) {
+          return res.status(400).json({
+            success: false,
+            message: "メールの文字数が上限を超えています。",
+          });
+        }
+
+        const rows = await sql`
+          SELECT
+            a.id,
+            a.email
+          FROM applications a
+          INNER JOIN jobs j
+            ON j.id = a.job_id
+          WHERE a.id = ${applicationId}
+            AND j.user_id = ${ownerUserId}
+            AND j.status <> '9'
+          LIMIT 1
+        `;
+
+        if (rows.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "応募情報が見つかりませんでした。",
+          });
+        }
+
+        const email = String(rows[0].email ?? "").trim();
+
+        if (!email) {
+          return res.status(400).json({
+            success: false,
+            message: "応募者のメールアドレスがありません。",
+          });
+        }
+
+        const apiKey = process.env.RESEND_API_KEY;
+        const mailFrom = process.env.MAIL_FROM;
+        const replyTo = process.env.MAIL_REPLY_TO;
+
+        if (!apiKey) {
+          throw new Error("RESEND_API_KEY が設定されていません。");
+        }
+
+        if (!mailFrom) {
+          throw new Error("MAIL_FROM が設定されていません。");
+        }
+
+        const payload: Record<string, any> = {
+          from: mailFrom,
+          to: [email],
+          subject,
+          text: body,
+        };
+
+        if (replyTo) {
+          payload.reply_to = replyTo;
+        }
+
+        const response = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          console.error("Resend error:", response.status, result);
+
+          return res.status(502).json({
+            success: false,
+            message:
+              result?.message || "メール送信サービスでエラーが発生しました。",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "メールを送信しました。",
+          emailId: result?.id ?? null,
+        });
+      }
+
+      // ----------------------------------------
       // 採用メモ保存
       // ----------------------------------------
       if (action === "save-memo") {
@@ -294,15 +402,12 @@ export default async function handler(req: any, res: any) {
       message: "応募を受け付けました。",
       application: applications[0],
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("applications API error:", error);
-
-    const errorMessage =
-      error instanceof Error ? error.message : String(error ?? "unknown error");
 
     return res.status(500).json({
       success: false,
-      message: `応募情報の処理中にエラーが発生しました。詳細: ${errorMessage}`,
+      message: "応募情報の処理中にエラーが発生しました。",
     });
   }
 }

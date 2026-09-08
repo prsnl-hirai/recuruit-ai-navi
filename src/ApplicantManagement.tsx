@@ -42,6 +42,11 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
   const [memoDraft, setMemoDraft] = useState("");
   const [savingMemo, setSavingMemo] = useState(false);
 
+  const [emailTemplate, setEmailTemplate] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+
   /*
    * 応募者一覧取得
    */
@@ -125,6 +130,108 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
    */
   const getJobTitle = (application: Application) => {
     return application.ai_title || application.title || "求人タイトル未設定";
+  };
+  const getEmailTemplate = (template: string, application: Application) => {
+    const name = application.name || "応募者";
+    const company = application.company_name || "採用担当";
+    const jobTitle = getJobTitle(application);
+
+    const templates: Record<string, { subject: string; body: string }> = {
+      contact: {
+        subject: `【${company}】ご応募ありがとうございます`,
+        body: `${name} 様
+
+この度は「${jobTitle}」へご応募いただき、ありがとうございます。
+${company} 採用担当です。
+
+応募内容を確認いたしました。
+今後の選考について、改めてご連絡いたします。
+
+ご不明点がございましたら、このメールへご返信ください。
+
+よろしくお願いいたします。
+
+${company}
+採用担当`,
+      },
+      interview: {
+        subject: `【${company}】面接のご案内`,
+        body: `${name} 様
+
+この度は「${jobTitle}」へご応募いただき、ありがとうございます。
+${company} 採用担当です。
+
+ぜひ面接にお越しいただきたく、ご連絡いたしました。
+
+【面接日時】
+○月○日（○） ○:○○
+
+【面接方法・場所】
+○○
+
+【持ち物】
+履歴書など
+
+ご都合が合わない場合は、可能な日時をいくつかご返信ください。
+
+それでは、お会いできることを楽しみにしております。
+
+${company}
+採用担当`,
+      },
+      offer: {
+        subject: `【${company}】採用のご連絡`,
+        body: `${name} 様
+
+先日は選考にご参加いただき、ありがとうございました。
+${company} 採用担当です。
+
+選考の結果、ぜひ当社でご活躍いただきたく、採用のご連絡を差し上げます。
+
+勤務開始日や今後のお手続きについて、改めてご相談させてください。
+
+ご不明点がございましたら、このメールへご返信ください。
+
+一緒に働けることを楽しみにしております。
+
+${company}
+採用担当`,
+      },
+      reject: {
+        subject: `【${company}】選考結果のご連絡`,
+        body: `${name} 様
+
+この度は「${jobTitle}」へご応募いただき、ありがとうございました。
+${company} 採用担当です。
+
+慎重に選考を行いました結果、今回は採用を見送らせていただくこととなりました。
+
+ご希望に添えない結果となりましたこと、何卒ご了承くださいますようお願いいたします。
+
+数ある求人の中からご応募いただきましたこと、心より御礼申し上げます。
+今後のご活躍をお祈り申し上げます。
+
+${company}
+採用担当`,
+      },
+    };
+
+    return templates[template] ?? { subject: "", body: "" };
+  };
+
+  const handleEmailTemplateChange = (
+    template: string,
+    application: Application,
+  ) => {
+    setEmailTemplate(template);
+
+    if (!template) {
+      return;
+    }
+
+    const selected = getEmailTemplate(template, application);
+    setEmailSubject(selected.subject);
+    setEmailBody(selected.body);
   };
 
   /*
@@ -218,6 +325,77 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
       );
     } finally {
       setSavingStatusId(null);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!selectedApplication) return;
+
+    if (!selectedApplication.email) {
+      alert("応募者のメールアドレスがありません。");
+      return;
+    }
+
+    if (!emailSubject.trim()) {
+      alert("メール件名を入力してください。");
+      return;
+    }
+
+    if (!emailBody.trim()) {
+      alert("メール本文を入力してください。");
+      return;
+    }
+
+    if (
+      !window.confirm(`${selectedApplication.email} 宛にメールを送信しますか？`)
+    ) {
+      return;
+    }
+
+    try {
+      setSendingEmail(true);
+
+      let userId = "";
+
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+      }
+
+      if (!userId) {
+        throw new Error("LINEユーザー情報を取得できませんでした。");
+      }
+
+      const response = await fetch("/api/applications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "send-email",
+          id: selectedApplication.id,
+          userId,
+          subject: emailSubject,
+          body: emailBody,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "メールを送信できませんでした。");
+      }
+
+      alert("メールを送信しました。");
+    } catch (error) {
+      console.error("メール送信エラー:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "メール送信中にエラーが発生しました。",
+      );
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -500,6 +678,9 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
             onClick={() => {
               setSelectedApplication(application);
               setMemoDraft(application.memo ?? "");
+              setEmailTemplate("");
+              setEmailSubject("");
+              setEmailBody("");
             }}
             style={{
               flex: 1,
@@ -559,6 +740,8 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
               left: "12px",
               top: "50%",
               transform: "translateY(-50%)",
+              border: "1px solid #dbe3ee",
+              borderRadius: "8px",
               background: "#ffffff",
               padding: "8px 10px",
               color: "#2563eb",
@@ -907,6 +1090,109 @@ export default function ApplicantManagement({ jobId = null, onBack }: Props) {
                   >
                     {selectedApplication.message}
                   </div>
+                </div>
+              )}
+
+              {selectedApplication.email && (
+                <div
+                  style={{
+                    padding: "14px",
+                    border: "1px solid #dbeafe",
+                    borderRadius: "10px",
+                    background: "#f8fbff",
+                  }}
+                >
+                  <strong>✉️ 応募者へメール</strong>
+
+                  <div
+                    style={{
+                      marginTop: "6px",
+                      color: "#6b7280",
+                      fontSize: "12px",
+                    }}
+                  >
+                    送信先：{selectedApplication.email}
+                  </div>
+
+                  <select
+                    value={emailTemplate}
+                    onChange={(e) =>
+                      handleEmailTemplateChange(
+                        e.target.value,
+                        selectedApplication,
+                      )
+                    }
+                    style={{
+                      width: "100%",
+                      marginTop: "10px",
+                      padding: "10px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      background: "#ffffff",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <option value="">テンプレートを選択</option>
+                    <option value="contact">応募受付・連絡</option>
+                    <option value="interview">面接案内</option>
+                    <option value="offer">採用通知</option>
+                    <option value="reject">不採用通知</option>
+                  </select>
+
+                  <input
+                    type="text"
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    maxLength={200}
+                    placeholder="件名"
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      marginTop: "10px",
+                      padding: "10px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                    }}
+                  />
+
+                  <textarea
+                    value={emailBody}
+                    onChange={(e) => setEmailBody(e.target.value)}
+                    maxLength={10000}
+                    rows={10}
+                    placeholder="メール本文"
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      marginTop: "10px",
+                      padding: "11px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      lineHeight: 1.6,
+                      resize: "vertical",
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleSendEmail}
+                    disabled={sendingEmail}
+                    style={{
+                      width: "100%",
+                      marginTop: "10px",
+                      padding: "11px",
+                      border: "none",
+                      borderRadius: "8px",
+                      background: sendingEmail ? "#9ca3af" : "#2563eb",
+                      color: "#ffffff",
+                      fontWeight: 700,
+                      cursor: sendingEmail ? "wait" : "pointer",
+                    }}
+                  >
+                    {sendingEmail ? "送信中..." : "✉️ この内容で送信"}
+                  </button>
                 </div>
               )}
 
