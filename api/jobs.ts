@@ -93,6 +93,28 @@ export default async function handler(req: any, res: any) {
           message: "statusが不正です",
         });
       }
+
+      // ========================================
+      // 掲載終了日チェック
+      // 本日より前の日付は保存不可
+      // ========================================
+      if (validThrough) {
+        const dateCheckRows = await sql`
+          SELECT
+            ${validThrough}::date <
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+            AS is_past
+        `;
+
+        if (dateCheckRows[0]?.is_past) {
+          return res.status(400).json({
+            success: false,
+            code: "VALID_THROUGH_PAST",
+            message: "掲載終了日は本日以降の日付を指定してください。",
+          });
+        }
+      }
+
       const public_id = generatepublic_id();
 
       const result = await sql`
@@ -166,6 +188,7 @@ export default async function handler(req: any, res: any) {
           ai_employment_type,
           ai_benefits,
           ai_appeal_points,
+          valid_through,
           public_id
         )
         VALUES (
@@ -424,7 +447,9 @@ export default async function handler(req: any, res: any) {
             if (job.valid_through) {
               const todayRows = await sql`
               SELECT
-               ${job.valid_through}::date < CURRENT_DATE AS expired`;
+               ${job.valid_through}::date <
+               (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+               AS expired`;
 
               if (todayRows[0]?.expired) {
                 return res.status(400).json({
@@ -468,6 +493,27 @@ export default async function handler(req: any, res: any) {
             success: false,
             message: "statusが不正です",
           });
+        }
+
+        // ========================================
+        // 掲載終了日チェック
+        // 本日より前の日付は保存不可
+        // ========================================
+        if (validThrough) {
+          const dateCheckRows = await sql`
+            SELECT
+              ${validThrough}::date <
+              (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+              AS is_past
+          `;
+
+          if (dateCheckRows[0]?.is_past) {
+            return res.status(400).json({
+              success: false,
+              code: "VALID_THROUGH_PAST",
+              message: "掲載終了日は本日以降の日付を指定してください。",
+            });
+          }
         }
 
         const rows = await sql`

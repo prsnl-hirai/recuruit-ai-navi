@@ -938,26 +938,15 @@ function App() {
   ======================================== */
 
   const handleSaveJob = async (status: "0" | "1" = "0") => {
-    if (!result) {
-      setErrorMessage("保存する求人情報がありません。");
+    // 掲載終了日のチェック
+    if (form.validThrough && form.validThrough < getTodayString()) {
+      setErrorMessage("掲載終了日は本日以降の日付を指定してください。");
+
       return;
     }
 
-    // 公開時のみ掲載終了日をチェック
-    if (
-      status === "1" &&
-      form.validThrough &&
-      form.validThrough < getTodayString()
-    ) {
-      setErrorMessage(
-        "掲載終了日を過ぎているため、この求人は公開できません。掲載終了日を本日以降の日付に変更してください。",
-      );
-
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-
+    if (!result) {
+      setErrorMessage("保存する求人情報がありません。");
       return;
     }
 

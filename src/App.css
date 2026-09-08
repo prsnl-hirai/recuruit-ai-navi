@@ -1365,9 +1365,8 @@ textarea {
   max-width: 100%;
   box-sizing: border-box;
 
-  /* スマホの date input 対策 */
-  -webkit-appearance: none;
-  appearance: none;
+  /* 他の入力欄と高さを揃える */
+  min-height: 46px;
 }
 
 @media (max-width: 700px) {
