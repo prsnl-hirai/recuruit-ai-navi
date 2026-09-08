@@ -78,6 +78,7 @@ export default async function handler(req: any, res: any) {
       const subsidyIds = subsidies.map((item: any) => Number(item.id));
 
       let conditions: any[] = [];
+      let amountRules: any[] = [];
       if (subsidyIds.length > 0) {
         // Neonの配列展開に依存せず、年度でJOINして取得します。
         conditions = await sql`
@@ -99,6 +100,20 @@ export default async function handler(req: any, res: any) {
             AND (s.valid_to IS NULL OR s.valid_to >= CURRENT_DATE)
           ORDER BY c.subsidy_id, c.sort_order, c.id
         `;
+
+        amountRules = await sql`
+          SELECT a.id, a.subsidy_id, a.fiscal_year, a.rule_key,
+                 a.amount_type, a.amount_display, a.min_amount_yen,
+                 a.max_amount_yen, a.rate_min, a.rate_max, a.unit,
+                 a.calculation_note, a.source_url
+          FROM subsidy_amount_rules a
+          INNER JOIN subsidies s ON s.id = a.subsidy_id
+          WHERE a.fiscal_year = ${fiscalYear}
+            AND a.active = TRUE
+            AND s.fiscal_year = ${fiscalYear}
+            AND s.active = TRUE
+          ORDER BY a.subsidy_id, a.id
+        `;
       }
 
       return res.status(200).json({
@@ -107,6 +122,7 @@ export default async function handler(req: any, res: any) {
         questions,
         subsidies,
         conditions,
+        amountRules,
       });
     }
 

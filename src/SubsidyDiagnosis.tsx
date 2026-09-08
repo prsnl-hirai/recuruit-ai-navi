@@ -38,7 +38,24 @@ type Condition = {
   sort_order: number;
 };
 
+type AmountRule = {
+  id: number;
+  subsidy_id: number;
+  fiscal_year: number;
+  rule_key: string;
+  amount_type: string;
+  amount_display: string;
+  min_amount_yen: number | null;
+  max_amount_yen: number | null;
+  rate_min: number | null;
+  rate_max: number | null;
+  unit: string | null;
+  calculation_note: string | null;
+  source_url: string | null;
+};
+
 type Candidate = {
+  amountRule?: AmountRule;
   subsidy: Subsidy;
   score: number;
   matchLevel: "high" | "medium" | "low";
@@ -52,6 +69,7 @@ type MasterResponse = {
   questions?: Question[];
   subsidies?: Subsidy[];
   conditions?: Condition[];
+  amountRules?: AmountRule[];
   message?: string;
 };
 
@@ -212,6 +230,7 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [subsidies, setSubsidies] = useState<Subsidy[]>([]);
   const [conditions, setConditions] = useState<Condition[]>([]);
+  const [amountRules, setAmountRules] = useState<AmountRule[]>([]);
   const [answers, setAnswers] = useState<Answers>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -263,6 +282,20 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
             weight: Number(item.weight ?? 0),
             required: Boolean(item.required),
             sort_order: Number(item.sort_order ?? 0),
+          })),
+        );
+        setAmountRules(
+          (data.amountRules ?? []).map((item) => ({
+            ...item,
+            id: Number(item.id),
+            subsidy_id: Number(item.subsidy_id),
+            fiscal_year: Number(item.fiscal_year),
+            min_amount_yen:
+              item.min_amount_yen == null ? null : Number(item.min_amount_yen),
+            max_amount_yen:
+              item.max_amount_yen == null ? null : Number(item.max_amount_yen),
+            rate_min: item.rate_min == null ? null : Number(item.rate_min),
+            rate_max: item.rate_max == null ? null : Number(item.rate_max),
           })),
         );
       } catch (e: any) {
@@ -422,8 +455,13 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
       const matchLevel: Candidate["matchLevel"] =
         score >= 80 ? "high" : score >= 55 ? "medium" : "low";
 
+      const amountRule = amountRules.find(
+        (rule) => rule.subsidy_id === subsidy.id && rule.rule_key === "summary",
+      );
+
       list.push({
         subsidy,
+        amountRule,
         score,
         matchLevel,
         reasons,
@@ -434,7 +472,7 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
     return list
       .sort((a, b) => b.score - a.score || a.subsidy.id - b.subsidy.id)
       .slice(0, 8);
-  }, [subsidies, conditions, answers, questionMap]);
+  }, [subsidies, conditions, amountRules, answers, questionMap]);
 
   const reset = () => {
     setAnswers({});
@@ -702,6 +740,61 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
                       ? "該当可能性：中"
                       : "追加確認が必要"}
                 </div>
+
+                {item.amountRule && (
+                  <div
+                    style={{
+                      marginTop: "14px",
+                      padding: "14px",
+                      background: "#fffbeb",
+                      border: "1px solid #fde68a",
+                      borderRadius: "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: "#92400e",
+                        fontSize: "12px",
+                        fontWeight: 800,
+                      }}
+                    >
+                      💰 支給額の目安
+                    </div>
+                    <div
+                      style={{
+                        marginTop: "5px",
+                        color: "#111827",
+                        fontSize: "16px",
+                        fontWeight: 800,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {item.amountRule.amount_display}
+                    </div>
+                    {item.amountRule.calculation_note && (
+                      <div
+                        style={{
+                          marginTop: "7px",
+                          color: "#6b7280",
+                          fontSize: "11px",
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {item.amountRule.calculation_note}
+                      </div>
+                    )}
+                    <div
+                      style={{
+                        marginTop: "7px",
+                        color: "#92400e",
+                        fontSize: "10px",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      ※支給額は簡易的な目安です。企業規模・対象者・取組内容・申請時期などにより異なります。
+                    </div>
+                  </div>
+                )}
 
                 {item.subsidy.description && (
                   <div
