@@ -173,6 +173,7 @@ export default async function handler(req: any, res: any) {
       const consultations = await sql`
         SELECT
           cr.id,
+          cr.public_id,
           cr.diagnosis_id,
           cr.company_name,
           cr.contact_name,
@@ -798,7 +799,7 @@ export default async function handler(req: any, res: any) {
           ${JSON.stringify(answerObject)}::jsonb,
           'completed'
         )
-        RETURNING id, public_id
+        RETURNING id
       `;
 
       const diagnosisId = Number(diagnosisRows[0].id);
@@ -880,7 +881,7 @@ export default async function handler(req: any, res: any) {
           TRUE,
           CURRENT_TIMESTAMP
         )
-        RETURNING id
+        RETURNING id, public_id
       `;
 
       const consultationId = Number(consultationRows[0].id);
