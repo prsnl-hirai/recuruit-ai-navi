@@ -1433,39 +1433,56 @@ function App() {
           style={{
             maxWidth: "700px",
             margin: "0 auto",
+            position: "relative",
             display: "flex",
             alignItems: "center",
-            gap: "12px",
+            justifyContent: "center",
+            minHeight: "52px",
           }}
         >
-          {/* {currentPage === "edit" && editingJobId !== null && ( */}
-          <button
-            type="button"
-            style={{
-              border: "none",
-              background: "transparent",
-              padding: "6px 0",
-              color: "#2563eb",
-              fontSize: "14px",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-            onClick={() => {
-              setEditingJobId(null);
-              setResult(null);
-              setErrorMessage("");
-              setCurrentPage("jobs");
+          {currentPage === "edit" && editingJobId !== null && (
+            <button
+              type="button"
+              style={{
+                position: "absolute",
+                left: 0,
+                top: "50%",
+                transform: "translateY(-50%)",
+                border: "1px solid #dbe3ee",
+                borderRadius: "8px",
+                background: "#ffffff",
+                padding: "8px 10px",
+                color: "#2563eb",
+                fontSize: "13px",
+                fontWeight: 700,
+                lineHeight: 1.2,
+                whiteSpace: "nowrap",
+                cursor: "pointer",
+              }}
+              onClick={() => {
+                setEditingJobId(null);
+                setResult(null);
+                setErrorMessage("");
+                setCurrentPage("jobs");
 
-              // URLも求人一覧に合わせる
-              const url = new URL(window.location.href);
-              url.searchParams.set("page", "jobs");
-              window.history.pushState({}, "", url.toString());
+                // URLも求人一覧に合わせる
+                const url = new URL(window.location.href);
+                url.searchParams.set("page", "jobs");
+                url.searchParams.delete("jobId");
+                window.history.pushState({}, "", url.toString());
+              }}
+            >
+              ← 求人一覧
+            </button>
+          )}
+
+          <div
+            className="header-inner"
+            style={{
+              width: "auto",
+              margin: 0,
             }}
           >
-            ← 求人一覧に戻る
-          </button>
-          {/* )} */}
-          <div className="header-inner">
             <div className="logo">
               <div className="logo-icon">🤖</div>
 
