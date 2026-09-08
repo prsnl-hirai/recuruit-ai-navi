@@ -518,20 +518,6 @@ function App() {
     }
   }, []);
 
-  const pathname = window.location.pathname;
-
-  if (pathname === "/company") {
-    return <CompanyPage />;
-  }
-
-  if (pathname === "/privacy") {
-    return <PrivacyPage />;
-  }
-
-  if (pathname === "/jobs") {
-    return <PublicJobList />;
-  }
-
   /* ========================================
      LIFF
   ======================================== */
@@ -1336,6 +1322,24 @@ function App() {
         }}
       />
     );
+  }
+
+  /* ========================================
+     ページ判定
+  ======================================== */
+
+  const pathname = window.location.pathname;
+
+  if (pathname === "/company") {
+    return <CompanyPage />;
+  }
+
+  if (pathname === "/privacy") {
+    return <PrivacyPage />;
+  }
+
+  if (pathname === "/jobs") {
+    return <PublicJobList />;
   }
 
   /* ========================================

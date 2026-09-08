@@ -20,6 +20,10 @@
     {
       "source": "/jobs",
       "destination": "/index.html"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
     }
   ]
 }
