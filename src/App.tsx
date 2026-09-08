@@ -8,6 +8,7 @@ import CompanyPage from "./CompanyPage";
 import PrivacyPage from "./PrivacyPage";
 import PublicJobList from "./PublicJobList";
 import SubsidyDiagnosis from "./SubsidyDiagnosis";
+import SubsidyConsultationManagement from "./SubsidyConsultationManagement";
 
 type WorkType = "固定時間" | "シフト制";
 type SalaryType = "時給" | "日給" | "月給" | "年俸";
@@ -522,7 +523,13 @@ function App() {
   /* 求人publishedID */
   const [publishedPublicId, setPublishedPublicId] = useState("");
 
-  type PageType = "create" | "jobs" | "edit" | "applicants" | "subsidy";
+  type PageType =
+    | "create"
+    | "jobs"
+    | "edit"
+    | "applicants"
+    | "subsidy"
+    | "subsidy-consultations";
 
   /* 現在のページ */
   const [currentPage, setCurrentPage] = useState<PageType>("create");
@@ -549,6 +556,8 @@ function App() {
       setCurrentPage("jobs");
     } else if (page === "subsidy") {
       setCurrentPage("subsidy");
+    } else if (page === "subsidy-consultations") {
+      setCurrentPage("subsidy-consultations");
     } else if (page === "applicants") {
       const jobId = params.get("jobId");
       const parsedJobId = jobId ? Number(jobId) : null;
@@ -1359,6 +1368,20 @@ function App() {
     });
   };
 
+  if (currentPage === "subsidy-consultations") {
+    return (
+      <SubsidyConsultationManagement
+        onBack={() => {
+          setCurrentPage("create");
+
+          const url = new URL(window.location.href);
+          url.searchParams.delete("page");
+          window.history.pushState({}, "", url.toString());
+        }}
+      />
+    );
+  }
+
   if (currentPage === "subsidy") {
     return (
       <SubsidyDiagnosis
@@ -1510,6 +1533,29 @@ function App() {
         </h1>
 
         <p>必要な情報を選択・入力するだけ。 AIが求人内容を最適化します。</p>
+
+        <button
+          type="button"
+          onClick={() => {
+            setCurrentPage("subsidy-consultations");
+
+            const url = new URL(window.location.href);
+            url.searchParams.set("page", "subsidy-consultations");
+            window.history.pushState({}, "", url.toString());
+          }}
+          style={{
+            marginTop: "12px",
+            border: "1px solid #d1d5db",
+            background: "#fff",
+            borderRadius: "10px",
+            padding: "9px 14px",
+            fontSize: "13px",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          💰 助成金相談管理
+        </button>
       </div>
 
       {/* ====================================
