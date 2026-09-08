@@ -111,6 +111,34 @@ function getSalaryValue(salary: unknown): number | undefined {
   return numberValue;
 }
 
+/**
+ * 既存の勤務地文字列からGoogle求人用住所を補完
+ */
+function parseJapaneseAddress(value: unknown) {
+  const raw = String(value ?? "")
+    .replace(/^〒?\s*\d{3}-?\d{4}\s*/, "")
+    .trim();
+  const pm = raw.match(/^(東京都|北海道|(?:京都|大阪)府|.{2,3}県)/);
+  const addressRegion = pm?.[1] || "";
+  const rest = addressRegion ? raw.slice(addressRegion.length).trim() : raw;
+  const lm = rest.match(
+    /^((?:.+?市.+?区)|(?:.+?市)|(?:.+?区)|(?:.+?郡.+?[町村])|(?:.+?[町村]))/,
+  );
+  const addressLocality = lm?.[1] || "";
+  const streetAddress = addressLocality
+    ? rest.slice(addressLocality.length).trim()
+    : "";
+  return { addressRegion, addressLocality, streetAddress };
+}
+
+function getValidThrough(value: unknown): string | undefined {
+  if (!value) return undefined;
+  const date = String(value).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? `${date}T23:59:59+09:00`
+    : undefined;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -234,6 +262,15 @@ export default async function handler(req: any, res: any) {
     const structuredStreetAddress = [job.street_address, job.building_name]
       .filter(Boolean)
       .join(" ");
+    const parsedAddress = parseJapaneseAddress(
+      job.ai_location || job.location || "",
+    );
+    const addressRegion =
+      job.prefecture || parsedAddress.addressRegion || undefined;
+    const addressLocality =
+      job.city || parsedAddress.addressLocality || undefined;
+    const streetAddress =
+      structuredStreetAddress || parsedAddress.streetAddress || undefined;
 
     /**
      * Google求人検索用
@@ -273,11 +310,11 @@ export default async function handler(req: any, res: any) {
 
           postalCode: job.postal_code || undefined,
 
-          addressRegion: job.prefecture || undefined,
+          addressRegion,
 
-          addressLocality: job.city || undefined,
+          addressLocality,
 
-          streetAddress: structuredStreetAddress || undefined,
+          streetAddress,
 
           addressCountry: "JP",
         },
@@ -287,9 +324,7 @@ export default async function handler(req: any, res: any) {
 
       directApply: true,
 
-      validThrough: job.valid_through
-        ? String(job.valid_through).slice(0, 10)
-        : undefined,
+      validThrough: getValidThrough(job.valid_through),
     };
 
     /**
