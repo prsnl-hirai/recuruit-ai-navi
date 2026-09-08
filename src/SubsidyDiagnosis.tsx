@@ -574,20 +574,6 @@ export default function SubsidyDiagnosis({ onBack }: { onBack?: () => void }) {
               gap: "10px",
             }}
           >
-            <button
-              type="button"
-              onClick={() => setShowResult(false)}
-              style={{
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                background: "#fff",
-                padding: "8px 10px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              ← 戻る
-            </button>
             <div>
               <div style={{ fontSize: "18px", fontWeight: 800 }}>
                 💰 助成金診断結果
