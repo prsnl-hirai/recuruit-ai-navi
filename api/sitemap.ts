@@ -19,6 +19,11 @@ export default async function handler(req: any, res: any) {
       FROM jobs
       WHERE status = '1'
         AND public_id IS NOT NULL
+        AND (
+          valid_through IS NULL
+          OR valid_through >=
+           (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+        )
       ORDER BY updated_at DESC
     `;
 

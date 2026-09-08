@@ -9,7 +9,7 @@ function cdata(value: unknown): string {
 function buildIndeedApplyData(
   job: any,
   baseUrl: string,
-  apiToken: string
+  apiToken: string,
 ): string {
   const title = String(job.ai_title || job.title || "").slice(0, 50);
   const company = String(job.company_name || "").slice(0, 50);
@@ -66,6 +66,11 @@ export default async function handler(req: any, res: any) {
       FROM jobs
       WHERE status = '1'
         AND public_id IS NOT NULL
+        AND (
+          valid_through IS NULL
+          OR valid_through >=
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+       )
       ORDER BY updated_at DESC
     `;
 
@@ -110,7 +115,7 @@ export default async function handler(req: any, res: any) {
     ${
       indeedApplyData
         ? `<indeed-apply-data><![CDATA[${cdata(
-            indeedApplyData
+            indeedApplyData,
           )}]]></indeed-apply-data>`
         : ""
     }
