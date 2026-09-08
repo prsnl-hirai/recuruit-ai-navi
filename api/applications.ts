@@ -294,12 +294,15 @@ export default async function handler(req: any, res: any) {
       message: "応募を受け付けました。",
       application: applications[0],
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("applications API error:", error);
+
+    const errorMessage =
+      error instanceof Error ? error.message : String(error ?? "unknown error");
 
     return res.status(500).json({
       success: false,
-      message: "応募情報の処理中にエラーが発生しました。",
+      message: `応募情報の処理中にエラーが発生しました。詳細: ${errorMessage}`,
     });
   }
 }
