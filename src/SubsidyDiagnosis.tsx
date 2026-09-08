@@ -971,9 +971,7 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
               onClick={() => {
                 setShowConsultation(true);
                 setConsultationError("");
-                setSelectedConsultationSubsidyIds(
-                  candidates.map((item) => item.subsidy.id),
-                );
+                setSelectedConsultationSubsidyIds([]);
               }}
               style={{
                 width: "100%",
@@ -1087,26 +1085,29 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
 
                     return (
                       <label
+                        key={subsidyId}
                         style={{
                           display: "flex",
                           alignItems: "flex-start",
                           gap: "10px",
-                          marginTop: "14px",
-                          padding: "12px",
-                          background: "#f9fafb",
-                          border: "1px solid #e5e7eb",
+                          padding: "11px 12px",
+                          background: checked ? "#ecfdf3" : "#f9fafb",
+                          border: checked
+                            ? "1px solid #86efac"
+                            : "1px solid #e5e7eb",
                           borderRadius: "10px",
                           cursor: "pointer",
                         }}
                       >
                         <input
                           type="checkbox"
-                          checked={consultationForm.consent}
-                          onChange={(e) =>
-                            setConsultationForm((prev) => ({
-                              ...prev,
-                              consent: e.target.checked,
-                            }))
+                          checked={checked}
+                          onChange={() =>
+                            setSelectedConsultationSubsidyIds((prev) =>
+                              prev.includes(subsidyId)
+                                ? prev.filter((id) => id !== subsidyId)
+                                : [...prev, subsidyId],
+                            )
                           }
                           style={{
                             appearance: "auto",
@@ -1121,17 +1122,42 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
                             accentColor: "#06c755",
                           }}
                         />
-
-                        <span
-                          style={{
-                            flex: 1,
-                            color: "#374151",
-                            fontSize: "12px",
-                            lineHeight: 1.7,
-                          }}
-                        >
-                          診断結果および入力した会社・連絡先情報を、相談対応のため提携する
-                          社会保険労務士または専門家へ提供することに同意します。
+                        <span style={{ flex: 1 }}>
+                          <span
+                            style={{
+                              display: "block",
+                              color: "#111827",
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {item.subsidy.name}
+                          </span>
+                          {item.subsidy.course_name && (
+                            <span
+                              style={{
+                                display: "block",
+                                marginTop: "2px",
+                                color: "#6b7280",
+                                fontSize: "11px",
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {item.subsidy.course_name}
+                            </span>
+                          )}
+                          <span
+                            style={{
+                              display: "block",
+                              marginTop: "3px",
+                              color: "#047857",
+                              fontSize: "10px",
+                              fontWeight: 700,
+                            }}
+                          >
+                            条件一致度 {item.score}%
+                          </span>
                         </span>
                       </label>
                     );
@@ -1193,9 +1219,26 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
                       consent: e.target.checked,
                     }))
                   }
-                  style={{ marginTop: "3px" }}
+                  style={{
+                    appearance: "auto",
+                    WebkitAppearance: "checkbox",
+                    width: "16px",
+                    height: "16px",
+                    minWidth: "16px",
+                    maxWidth: "16px",
+                    minHeight: "16px",
+                    maxHeight: "16px",
+                    flex: "0 0 16px",
+                    margin: "2px 0 0 0",
+                    padding: 0,
+                    border: "none",
+                    borderRadius: 0,
+                    boxSizing: "border-box",
+                    cursor: "pointer",
+                    accentColor: "#06c755",
+                  }}
                 />
-                <span>
+                <span style={{ flex: 1, minWidth: 0 }}>
                   診断結果および入力した会社・連絡先情報を、相談対応のため提携する社会保険労務士または専門家へ提供することに同意します。
                 </span>
               </label>
