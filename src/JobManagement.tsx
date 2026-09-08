@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
+import "./JobManagement.css";
 
 type Job = {
   id: number;
@@ -135,6 +136,47 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
     }
 
     return date.toLocaleDateString("ja-JP");
+  };
+
+  /*
+   * トグルボタン切り替え
+   */
+  const handleTogglePublish = async (job: Job) => {
+    const newStatus = job.status === "1" ? "0" : "1";
+
+    try {
+      const response = await fetch("/api/jobs", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: job.id,
+          status: newStatus,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "公開状態を変更できませんでした。");
+      }
+
+      setJobs((prev) =>
+        prev.map((item) =>
+          item.id === job.id
+            ? {
+                ...item,
+                status: newStatus,
+              }
+            : item,
+        ),
+      );
+    } catch (error) {
+      console.error("公開状態変更エラー:", error);
+
+      alert("公開状態を変更できませんでした。");
+    }
   };
 
   return (
@@ -404,21 +446,21 @@ export default function JobManagement({ onCreateJob, onEditJob }: Props) {
                   >
                     ✏️ 編集
                   </button>
+                  <label className="publish-switch">
+                    <input
+                      type="checkbox"
+                      checked={job.status === "1"}
+                      onChange={() => handleTogglePublish(job)}
+                    />
 
+                    <span className="publish-slider" />
+
+                    <span className="publish-label">
+                      {job.status === "1" ? "公開" : "非公開"}
+                    </span>
+                  </label>
                   {job.status === "1" && job.public_id && (
-                    <button
-                      type="button"
-                      onClick={() => openPublicJob(job.public_id)}
-                      style={{
-                        flex: 1,
-                        padding: "10px",
-                        border: "none",
-                        borderRadius: "8px",
-                        background: "#2563eb",
-                        color: "#ffffff",
-                        fontWeight: 700,
-                      }}
-                    >
+                    <button onClick={() => openPublicJob(job.public_id!)}>
                       🌐 公開ページ
                     </button>
                   )}

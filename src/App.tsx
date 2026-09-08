@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useEffect, useState } from "react";
 import liff from "@line/liff";
 import "./App.css";
 import PublishOptions from "./PublishOptions";
@@ -503,7 +503,7 @@ function App() {
      URLチェック
   ======================================== */
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
     const page = params.get("page");
@@ -2577,24 +2577,11 @@ function App() {
                 作り直す
               </button>
 
-              <button
-                type="button"
-                className="save-button"
-                onClick={() => handleSaveJob("0")}
-                disabled={saving}
-              >
-                {saving ? "保存中..." : "💾 下書き保存"}
-              </button>
-
-              <button
-                type="button"
-                className="publish-button"
-                onClick={() => handleSaveJob("1")}
-                disabled={saving}
-              >
-                {saving ? "処理中..." : "🚀 この求人を公開"}
+              <button onClick={() => handleSaveJob("0")} disabled={saving}>
+                {saving ? "保存中..." : "💾保存"}
               </button>
             </div>
+
             {publishedPublicId && result && (
               <PublishOptions
                 publicId={publishedPublicId}
