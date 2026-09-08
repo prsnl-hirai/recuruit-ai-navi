@@ -570,6 +570,11 @@ function App() {
   ======================================== */
 
   useEffect(() => {
+    // 独立した助成金相談管理画面ではLIFFを初期化しない
+    if (window.location.pathname === "/admin/subsidy-consultations") {
+      return;
+    }
+
     const initLiff = async () => {
       try {
         await liff.init({
@@ -1460,33 +1465,33 @@ function App() {
             gap: "12px",
           }}
         >
-          {/* {currentPage === "edit" && editingJobId !== null && ( */}
-          <button
-            type="button"
-            style={{
-              border: "none",
-              background: "transparent",
-              padding: "6px 0",
-              color: "#2563eb",
-              fontSize: "14px",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-            onClick={() => {
-              setEditingJobId(null);
-              setResult(null);
-              setErrorMessage("");
-              setCurrentPage("jobs");
+          {currentPage === "edit" && editingJobId !== null && (
+            <button
+              type="button"
+              style={{
+                border: "none",
+                background: "transparent",
+                padding: "6px 0",
+                color: "#2563eb",
+                fontSize: "14px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+              onClick={() => {
+                setEditingJobId(null);
+                setResult(null);
+                setErrorMessage("");
+                setCurrentPage("jobs");
 
-              // URLも求人一覧に合わせる
-              const url = new URL(window.location.href);
-              url.searchParams.set("page", "jobs");
-              window.history.pushState({}, "", url.toString());
-            }}
-          >
-            ← 求人一覧に戻る
-          </button>
-          {/* )} */}
+                // URLも求人一覧に合わせる
+                const url = new URL(window.location.href);
+                url.searchParams.set("page", "jobs");
+                window.history.pushState({}, "", url.toString());
+              }}
+            >
+              ← 求人一覧に戻る
+            </button>
+          )}
           <div className="header-inner">
             <div className="logo">
               <div className="logo-icon">🤖</div>
