@@ -753,7 +753,6 @@ export default async function handler(req: any, res: any) {
     <a href="/company">運営会社</a>
     <span>｜</span>
     <a href="/privacy">プライバシーポリシー</a>
-</footer>
   </footer>
 
 </body>

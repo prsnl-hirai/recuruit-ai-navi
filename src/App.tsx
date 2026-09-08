@@ -5,6 +5,7 @@ import PublishOptions from "./PublishOptions";
 import JobManagement from "./JobManagement";
 import CompanyPage from "./CompanyPage";
 import PrivacyPage from "./PrivacyPage";
+import PublicJobList from "./PublicJobList";
 
 type WorkType = "固定時間" | "シフト制";
 type SalaryType = "時給" | "日給" | "月給" | "年俸";
@@ -525,6 +526,10 @@ function App() {
 
   if (pathname === "/privacy") {
     return <PrivacyPage />;
+  }
+
+  if (pathname === "/jobs") {
+    return <PublicJobList />;
   }
 
   /* ========================================
