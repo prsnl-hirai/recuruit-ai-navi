@@ -1434,10 +1434,6 @@ function App() {
 
   const pathname = window.location.pathname;
 
-  if (pathname === "/admin/subsidy-consultations") {
-    return <SubsidyConsultationManagement />;
-  }
-
   if (pathname === "/company") {
     return <CompanyPage />;
   }
@@ -2812,4 +2808,14 @@ function App() {
   );
 }
 
-export default App;
+function RootApp() {
+  const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+
+  if (pathname === "/admin/subsidy-consultations") {
+    return <SubsidyConsultationManagement />;
+  }
+
+  return <App />;
+}
+
+export default RootApp;
