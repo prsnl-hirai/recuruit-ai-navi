@@ -68,6 +68,9 @@ type JobForm = {
 
   // AIへのリクエスト
   aiRequest: string;
+
+  // 掲載終了日
+  validThrough: string;
 };
 
 type Score = {
@@ -445,6 +448,8 @@ const initialForm: JobForm = {
   appealPoints: [],
 
   aiRequest: "",
+
+  validThrough: "",
 };
 
 /* ========================================
@@ -1032,6 +1037,8 @@ function App() {
 
         aiRequest: form.aiRequest,
 
+        validThrough: form.validThrough,
+
         /* AI分析結果 */
         nearestStations: result.nearestStations,
         score: result.score,
@@ -1204,6 +1211,10 @@ function App() {
 
           appealPoints: toArray(job.appeal_points),
           aiRequest: job.ai_request ?? "",
+
+          validThrough: job.valid_through
+            ? String(job.valid_through).slice(0, 10)
+            : "",
         };
 
         setForm(loadedForm);
@@ -2019,6 +2030,22 @@ function App() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* 掲載終了日 */}
+          <div className="form-group">
+            <label>掲載終了日</label>
+
+            <input
+              type="date"
+              value={form.validThrough}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  validThrough: e.target.value,
+                }))
+              }
+            />
           </div>
         </section>
 

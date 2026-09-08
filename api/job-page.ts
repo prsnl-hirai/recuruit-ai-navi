@@ -282,6 +282,10 @@ export default async function handler(req: any, res: any) {
       url: publicUrl,
 
       directApply: true,
+
+      validThrough: job.valid_through
+        ? new Date(job.valid_through).toISOString()
+        : undefined,
     };
 
     /**

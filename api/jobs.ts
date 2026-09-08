@@ -78,6 +78,7 @@ export default async function handler(req: any, res: any) {
         aiEmploymentType,
         aiBenefits,
         aiAppealPoints,
+        validThrough,
       } = req.body;
 
       // ========================================
@@ -237,6 +238,7 @@ export default async function handler(req: any, res: any) {
           ${aiEmploymentType || null},
           ${aiBenefits || null},
           ${aiAppealPoints || null},
+          ${validThrough || null},
           ${public_id || null}
         )
         RETURNING *;
@@ -368,6 +370,7 @@ export default async function handler(req: any, res: any) {
           aiEmploymentType,
           aiBenefits,
           aiAppealPoints,
+          validThrough,
         } = req.body ?? {};
 
         // ========================================
@@ -521,6 +524,7 @@ export default async function handler(req: any, res: any) {
         ai_employment_type = ${aiEmploymentType || null},
         ai_benefits = ${aiBenefits || null},
         ai_appeal_points = ${aiAppealPoints || null},
+        valid_through = ${validThrough || null},
 
         updated_at = CURRENT_TIMESTAMP
 
