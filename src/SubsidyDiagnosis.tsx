@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import liff from "@line/liff";
 
 type AnswerValue = string | string[];
 type Answers = Record<string, AnswerValue>;
@@ -532,6 +533,8 @@ export default function SubsidyDiagnosis(_props: { onBack?: () => void }) {
         body: JSON.stringify({
           action: "subsidy-consultation",
           fiscalYear: FISCAL_YEAR,
+          userId:
+            liff.getContext()?.userId ?? liff.getDecodedIDToken()?.sub ?? null,
           companyName: consultationForm.companyName.trim(),
           contactName: consultationForm.contactName.trim(),
           email: consultationForm.email.trim(),

@@ -5,6 +5,31 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+async function pushLineMessage(to: string, text: string) {
+  const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!token || !to) return false;
+
+  const response = await fetch("https://api.line.me/v2/bot/message/push", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      to,
+      messages: [{ type: "text", text }],
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error("LINE push failed:", response.status, detail);
+    return false;
+  }
+
+  return true;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -706,6 +731,7 @@ export default async function handler(req: any, res: any) {
 
       const sql = neon(process.env.DATABASE_URL);
       const {
+        userId,
         companyName,
         contactName,
         email,
@@ -797,6 +823,7 @@ export default async function handler(req: any, res: any) {
 
       const consultationRows = await sql`
         INSERT INTO consultation_requests (
+          user_id,
           diagnosis_id,
           company_name,
           contact_name,
@@ -810,6 +837,7 @@ export default async function handler(req: any, res: any) {
           consented_at
         )
         VALUES (
+          ${userId ? String(userId).trim() : null},
           ${diagnosisId},
           ${String(companyName).trim()},
           ${String(contactName).trim()},
@@ -849,6 +877,93 @@ export default async function handler(req: any, res: any) {
           ON CONFLICT (consultation_id, subsidy_id)
           DO NOTHING
         `;
+      }
+
+      // ---------------------------------------------------------
+      // LINE通知
+      // LINE送信に失敗しても、相談申込み自体は成功扱いにします。
+      // ---------------------------------------------------------
+      try {
+        const selectedSubsidies = await sql`
+          SELECT s.name, s.course_name
+          FROM consultation_subsidies cs
+          INNER JOIN subsidies s ON s.id = cs.subsidy_id
+          WHERE cs.consultation_id = ${consultationId}
+          ORDER BY s.name, s.course_name, s.id
+        `;
+
+        const subsidyText =
+          selectedSubsidies.length > 0
+            ? selectedSubsidies
+                .map(
+                  (item: any) =>
+                    `・${[item.name, item.course_name].filter(Boolean).join(" / ")}`,
+                )
+                .join("\n")
+            : "・未登録";
+
+        const safeMessage =
+          consultationMessage && String(consultationMessage).trim()
+            ? String(consultationMessage).trim()
+            : "記入なし";
+
+        // ① 相談者本人への受付完了通知
+        if (userId) {
+          const userMessage = [
+            "💰 専門家相談を受け付けました",
+            "",
+            `${String(companyName).trim()} 様`,
+            "助成金に関する専門家相談のお申し込みありがとうございます。",
+            "",
+            "【相談したい助成金】",
+            subsidyText,
+            "",
+            "【ご相談内容】",
+            safeMessage,
+            "",
+            "内容を確認後、相談内容に応じて提携する社会保険労務士または専門家をご案内します。",
+            "",
+            `相談受付番号：${consultationId}`,
+          ].join("\n");
+
+          await pushLineMessage(String(userId), userMessage);
+        } else {
+          console.warn(
+            "LINE userId が取得できなかったため、相談者本人へのLINE通知を省略しました",
+          );
+        }
+
+        // ② 求人AIナビ運営者への新規相談通知
+        const adminLineUserId = process.env.ADMIN_LINE_USER_ID;
+        if (adminLineUserId) {
+          const adminMessage = [
+            "🔔 新しい助成金の専門家相談が入りました",
+            "",
+            `【相談ID】${consultationId}`,
+            `【会社名】${String(companyName).trim()}`,
+            `【担当者】${String(contactName).trim()}`,
+            `【都道府県】${String(prefecture).trim()}`,
+            `【メール】${String(email).trim()}`,
+            `【電話】${phone ? String(phone).trim() : "未登録"}`,
+            "",
+            "【相談したい助成金】",
+            subsidyText,
+            "",
+            "【相談内容】",
+            safeMessage,
+            "",
+            "管理画面：",
+            "https://recuruit-ai-navi.vercel.app/admin/subsidy-consultations",
+          ].join("\n");
+
+          await pushLineMessage(adminLineUserId, adminMessage);
+        } else {
+          console.warn(
+            "ADMIN_LINE_USER_ID が未設定のため、運営者LINE通知を省略しました",
+          );
+        }
+      } catch (lineError) {
+        console.error("相談申込み後のLINE通知処理でエラー:", lineError);
       }
 
       return res.status(200).json({
