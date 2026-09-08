@@ -5,6 +5,15 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+function generateConsultationPublicId(length = 12) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let result = "";
+  for (let i = 0; i < length; i += 1) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+}
+
 async function pushLineMessage(to: string, text: string) {
   const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!token || !to) return false;
@@ -789,7 +798,7 @@ export default async function handler(req: any, res: any) {
           ${JSON.stringify(answerObject)}::jsonb,
           'completed'
         )
-        RETURNING id
+        RETURNING id, public_id
       `;
 
       const diagnosisId = Number(diagnosisRows[0].id);
@@ -821,8 +830,28 @@ export default async function handler(req: any, res: any) {
         `;
       }
 
+      let consultationPublicId = "";
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const candidate = generateConsultationPublicId(12);
+        const duplicate = await sql`
+          SELECT id
+          FROM consultation_requests
+          WHERE public_id = ${candidate}
+          LIMIT 1
+        `;
+        if (duplicate.length === 0) {
+          consultationPublicId = candidate;
+          break;
+        }
+      }
+
+      if (!consultationPublicId) {
+        throw new Error("相談IDの生成に失敗しました");
+      }
+
       const consultationRows = await sql`
         INSERT INTO consultation_requests (
+          public_id,
           user_id,
           diagnosis_id,
           company_name,
@@ -837,6 +866,7 @@ export default async function handler(req: any, res: any) {
           consented_at
         )
         VALUES (
+          ${consultationPublicId},
           ${userId ? String(userId).trim() : null},
           ${diagnosisId},
           ${String(companyName).trim()},
@@ -854,6 +884,9 @@ export default async function handler(req: any, res: any) {
       `;
 
       const consultationId = Number(consultationRows[0].id);
+      const consultationPublicIdSaved = String(
+        consultationRows[0].public_id || consultationPublicId,
+      );
       const ids = Array.isArray(subsidyIds)
         ? [
             ...new Set(
@@ -923,7 +956,7 @@ export default async function handler(req: any, res: any) {
             "",
             "内容を確認後、相談内容に応じて提携する社会保険労務士または専門家をご案内します。",
             "",
-            `相談受付番号：${consultationId}`,
+            `相談受付番号：${consultationPublicIdSaved}`,
           ].join("\n");
 
           await pushLineMessage(String(userId), userMessage);
@@ -939,7 +972,7 @@ export default async function handler(req: any, res: any) {
           const adminMessage = [
             "🔔 新しい助成金の専門家相談が入りました",
             "",
-            `【相談ID】${consultationId}`,
+            `【相談ID】${consultationPublicIdSaved}`,
             `【会社名】${String(companyName).trim()}`,
             `【担当者】${String(contactName).trim()}`,
             `【都道府県】${String(prefecture).trim()}`,
@@ -970,6 +1003,7 @@ export default async function handler(req: any, res: any) {
         success: true,
         diagnosisId,
         consultationId,
+        consultationPublicId: consultationPublicIdSaved,
       });
     }
 

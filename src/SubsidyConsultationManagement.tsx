@@ -59,6 +59,7 @@ type Expert = {
 
 type Consultation = {
   id: number;
+  public_id?: string | null;
   diagnosis_id: number | null;
   company_name: string | null;
   contact_name: string | null;
