@@ -2,6 +2,20 @@ import { neon } from "@neondatabase/serverless";
 
 const sql = neon(process.env.DATABASE_URL!);
 
+const formatJapaneseInterviewDate = (value: string) => {
+  const dateText = String(value).slice(0, 10);
+  const [year, month, day] = dateText.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return dateText;
+  }
+
+  const date = new Date(year, month - 1, day);
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+
+  return `${year}年${month}月${day}日（${weekdays[date.getDay()]}）`;
+};
+
 export default async function handler(req: any, res: any) {
   try {
     // ========================================
@@ -84,7 +98,7 @@ export default async function handler(req: any, res: any) {
           "",
           `求人：${title}`,
           `応募者：${application.name || "氏名未設定"}`,
-          `日時：${interviewDate} ${interviewTime}`,
+          `日時：${formatJapaneseInterviewDate(interviewDate)} ${interviewTime}`,
           application.interview_method
             ? `方法：${application.interview_method}`
             : "",

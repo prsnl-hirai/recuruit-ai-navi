@@ -414,6 +414,67 @@ ${company}
     }
   };
 
+  const openGoogleCalendar = () => {
+    if (!selectedApplication) return;
+
+    if (!interviewDate || !interviewTime) {
+      alert("面接日と面接時間を入力してください。");
+      return;
+    }
+
+    const [year, month, day] = interviewDate.split("-").map(Number);
+    const [hour, minute] = interviewTime.split(":").map(Number);
+
+    if (!year || !month || !day || Number.isNaN(hour) || Number.isNaN(minute)) {
+      alert("面接日時が正しくありません。");
+      return;
+    }
+
+    const start = new Date(year, month - 1, day, hour, minute, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+
+    const toGoogleDate = (date: Date) => {
+      const y = String(date.getFullYear());
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      const h = String(date.getHours()).padStart(2, "0");
+      const min = String(date.getMinutes()).padStart(2, "0");
+      const sec = String(date.getSeconds()).padStart(2, "0");
+
+      return `${y}${m}${d}T${h}${min}${sec}`;
+    };
+
+    const jobTitle = getJobTitle(selectedApplication);
+    const applicantName = selectedApplication.name || "応募者";
+
+    const details = [
+      `求人：${jobTitle}`,
+      `応募者：${applicantName}`,
+      interviewMethod ? `面接方法：${interviewMethod}` : "",
+      selectedApplication.phone ? `電話番号：${selectedApplication.phone}` : "",
+      selectedApplication.email ? `メール：${selectedApplication.email}` : "",
+      interviewMemo ? `メモ：${interviewMemo}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const params = new URLSearchParams({
+      action: "TEMPLATE",
+      text: `面接：${applicantName}｜${jobTitle}`,
+      dates: `${toGoogleDate(start)}/${toGoogleDate(end)}`,
+      details,
+      ctz: "Asia/Tokyo",
+    });
+
+    if (interviewLocation.trim()) {
+      params.set("location", interviewLocation.trim());
+    }
+
+    const url = `https://calendar.google.com/calendar/render?${params.toString()}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const handleInterviewSave = async () => {
     if (!selectedApplication) return;
 
@@ -1492,9 +1553,11 @@ ${company}
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(140px, 1fr))",
                       gap: "10px",
                       marginTop: "10px",
+                      width: "100%",
                     }}
                   >
                     <label style={{ fontSize: "13px", fontWeight: 700 }}>
@@ -1505,6 +1568,7 @@ ${company}
                         onChange={(e) => setInterviewDate(e.target.value)}
                         style={{
                           width: "100%",
+                          minWidth: 0,
                           boxSizing: "border-box",
                           marginTop: "6px",
                           padding: "10px",
@@ -1524,6 +1588,7 @@ ${company}
                         onChange={(e) => setInterviewTime(e.target.value)}
                         style={{
                           width: "100%",
+                          minWidth: 0,
                           boxSizing: "border-box",
                           marginTop: "6px",
                           padding: "10px",
@@ -1640,6 +1705,45 @@ ${company}
                   >
                     {savingInterview ? "保存中..." : "💾 面接情報を保存"}
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={openGoogleCalendar}
+                    disabled={!interviewDate || !interviewTime}
+                    style={{
+                      width: "100%",
+                      marginTop: "8px",
+                      padding: "11px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "8px",
+                      background:
+                        !interviewDate || !interviewTime
+                          ? "#f3f4f6"
+                          : "#ffffff",
+                      color:
+                        !interviewDate || !interviewTime
+                          ? "#9ca3af"
+                          : "#374151",
+                      fontWeight: 700,
+                      cursor:
+                        !interviewDate || !interviewTime
+                          ? "not-allowed"
+                          : "pointer",
+                    }}
+                  >
+                    📆 Googleカレンダーに登録
+                  </button>
+
+                  <div
+                    style={{
+                      marginTop: "6px",
+                      color: "#6b7280",
+                      fontSize: "11px",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    面接時間は1時間で登録画面を開きます。Googleカレンダー側で変更できます。
+                  </div>
                 </div>
               )}
 
