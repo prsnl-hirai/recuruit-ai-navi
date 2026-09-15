@@ -295,6 +295,121 @@ export default async function handler(req: any, res: any) {
       const action = String(req.query.action ?? "").trim();
 
       // ========================================
+      // 求人管理画面一覧
+      // 旧 /api/job-list を統合
+      // ========================================
+      if (action === "list") {
+        const isCronRequest = String(req.query.cron ?? "") === "1";
+
+        // 旧 job-list.ts のCron処理も維持
+        if (isCronRequest) {
+          const expiredRows = await sql`
+            UPDATE jobs
+            SET
+              status = '0',
+              updated_at = CURRENT_TIMESTAMP
+            WHERE status = '1'
+              AND valid_through IS NOT NULL
+              AND valid_through <
+                (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+            RETURNING id
+          `;
+
+          return res.status(200).json({
+            success: true,
+            expiredCount: expiredRows.length,
+          });
+        }
+
+        const userId = String(req.query.userId ?? "").trim();
+
+        if (!userId) {
+          return res.status(400).json({
+            success: false,
+            message: "ユーザーIDがありません",
+          });
+        }
+
+        // 管理画面を開いた時点で期限切れ求人を自動で非公開化
+        await sql`
+          UPDATE jobs
+          SET
+            status = '0',
+            updated_at = CURRENT_TIMESTAMP
+          WHERE user_id = ${userId}
+            AND status = '1'
+            AND valid_through IS NOT NULL
+            AND valid_through <
+              (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+        `;
+
+        const rows = await sql`
+          SELECT
+            j.id,
+            j.public_id,
+            j.status,
+            j.title,
+            j.ai_title,
+            j.company_name,
+            j.employment_type,
+            j.ai_employment_type,
+            j.salary,
+            j.ai_salary,
+            j.postal_code,
+            j.prefecture,
+            j.city,
+            j.street_address,
+            j.building_name,
+            j.valid_through,
+            j.created_at,
+            j.updated_at,
+
+            (
+              SELECT COUNT(*)::int
+              FROM applications a
+              WHERE a.job_id = j.id
+            ) AS applicant_count,
+
+            (
+              SELECT COUNT(*)::int
+              FROM applications a
+              WHERE a.job_id = j.id
+                AND COALESCE(a.status, '0') = '0'
+            ) AS unhandled_applicant_count,
+
+            COALESCE(
+              (
+                SELECT json_agg(
+                  json_build_object(
+                    'channel', c.channel,
+                    'enabled', c.enabled,
+                    'status', c.status,
+                    'external_job_id', c.external_job_id,
+                    'published_at', c.published_at,
+                    'last_synced_at', c.last_synced_at,
+                    'error_message', c.error_message
+                  )
+                  ORDER BY c.channel
+                )
+                FROM job_publication_channels c
+                WHERE c.job_id = j.id
+              ),
+              '[]'::json
+            ) AS publication_channels
+
+          FROM jobs j
+          WHERE j.user_id = ${userId}
+            AND j.status <> '9'
+          ORDER BY j.created_at DESC
+        `;
+
+        return res.status(200).json({
+          success: true,
+          jobs: rows,
+        });
+      }
+
+      // ========================================
       // 媒体別掲載設定取得
       // ========================================
       if (action === "publication-channels") {

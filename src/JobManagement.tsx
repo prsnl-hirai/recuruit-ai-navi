@@ -2,6 +2,16 @@ import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import "./JobManagement.css";
 
+type PublicationChannelStatus = {
+  channel: "terrace_jobs" | "stanby";
+  enabled: boolean;
+  status: "not_connected" | "pending" | "published" | "paused" | "error";
+  external_job_id?: string | null;
+  published_at?: string | null;
+  last_synced_at?: string | null;
+  error_message?: string | null;
+};
+
 type Job = {
   id: number;
   public_id?: string;
@@ -26,6 +36,8 @@ type Job = {
 
   applicant_count?: number;
   unhandled_applicant_count?: number;
+
+  publication_channels?: PublicationChannelStatus[];
 
   created_at?: string;
   updated_at?: string;
@@ -68,7 +80,7 @@ export default function JobManagement({
       }
 
       const response = await fetch(
-        `/api/job-list?userId=${encodeURIComponent(userId)}`,
+        `/api/jobs?action=list&userId=${encodeURIComponent(userId)}`,
       );
 
       const data = await response.json();
@@ -163,6 +175,61 @@ export default function JobManagement({
     const todayString = `${year}-${month}-${day}`;
 
     return String(validThrough).slice(0, 10) < todayString;
+  };
+
+  /*
+   * 媒体別掲載ステータス
+   */
+  const getPublicationChannel = (
+    job: Job,
+    channel: PublicationChannelStatus["channel"],
+  ) => {
+    return job.publication_channels?.find((item) => item.channel === channel);
+  };
+
+  const getChannelStatusLabel = (
+    channel: PublicationChannelStatus["channel"],
+    item?: PublicationChannelStatus,
+  ) => {
+    if (!item || !item.enabled) {
+      return channel === "terrace_jobs" ? "停止中" : "未連携";
+    }
+
+    switch (item.status) {
+      case "published":
+        return "掲載中";
+      case "pending":
+        return "連携準備中";
+      case "paused":
+        return "停止中";
+      case "error":
+        return "エラー";
+      default:
+        return channel === "terrace_jobs" ? "公開準備中" : "未連携";
+    }
+  };
+
+  const getChannelBadgeStyle = (
+    channel: PublicationChannelStatus["channel"],
+    item?: PublicationChannelStatus,
+  ) => {
+    if (item?.status === "error") {
+      return { background: "#fee2e2", color: "#b91c1c" };
+    }
+
+    if (!item?.enabled || item.status === "paused") {
+      return { background: "#f3f4f6", color: "#6b7280" };
+    }
+
+    if (item.status === "published") {
+      return { background: "#dcfce7", color: "#15803d" };
+    }
+
+    if (channel === "stanby" && item.status === "pending") {
+      return { background: "#fef3c7", color: "#92400e" };
+    }
+
+    return { background: "#e0f2fe", color: "#0369a1" };
   };
 
   /*
@@ -476,6 +543,66 @@ export default function JobManagement({
                       )}
                     </div>
                   )}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "14px",
+                    padding: "12px",
+                    borderRadius: "10px",
+                    background: "#f8fafc",
+                    border: "1px solid #e5e7eb",
+                  }}
+                >
+                  <div
+                    style={{
+                      marginBottom: "8px",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      color: "#475569",
+                    }}
+                  >
+                    掲載先
+                  </div>
+
+                  {(
+                    [
+                      ["terrace_jobs", "TERRACE JOBS"],
+                      ["stanby", "スタンバイ"],
+                    ] as const
+                  ).map(([channel, label]) => {
+                    const item = getPublicationChannel(job, channel);
+                    const badgeStyle = getChannelBadgeStyle(channel, item);
+
+                    return (
+                      <div
+                        key={channel}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "10px",
+                          padding: "5px 0",
+                          fontSize: "13px",
+                        }}
+                      >
+                        <span style={{ fontWeight: 700 }}>{label}</span>
+
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "3px 8px",
+                            borderRadius: "999px",
+                            fontSize: "11px",
+                            fontWeight: 800,
+                            ...badgeStyle,
+                          }}
+                        >
+                          {getChannelStatusLabel(channel, item)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div
