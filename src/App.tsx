@@ -82,15 +82,6 @@ type JobForm = {
   validThrough: string;
 };
 
-type Score = {
-  total: number;
-  salary: number;
-  workConditions: number;
-  benefits: number;
-  accessibility: number;
-  appeal: number;
-};
-
 type AnalysisResult = {
   nearestStations: {
     stationName: string;
@@ -98,16 +89,40 @@ type AnalysisResult = {
     estimatedDistance: string;
   }[];
 
-  score: Score;
-
   marketSummary: string[];
 
-  improvementPoints: {
-    priority: number;
-    title: string;
-    reason: string;
-    recommendation: string;
+  targetAnalysis: {
+    target: string;
+    keyNeeds: string[];
+    effectiveAppeals: string[];
+    concerns: string[];
+    recommendedMessage: string;
   }[];
+
+  catchCopyCandidates: string[];
+
+  advice: {
+    salaryAdvice: {
+      currentSalary: string;
+      suggestedRange: string;
+      reason: string;
+      note: string;
+    };
+    conditionSuggestions: {
+      title: string;
+      reason: string;
+      target: string;
+    }[];
+    contentAdvice: {
+      title: string;
+      recommendation: string;
+    }[];
+    targetAdvice: {
+      target: string;
+      effectiveAppeals: string[];
+      message: string;
+    }[];
+  };
 
   job: {
     title: string;
@@ -946,22 +961,35 @@ function App() {
           ? data.nearestStations
           : [],
 
-        score: {
-          total: data.score?.total ?? 0,
-          salary: data.score?.salary ?? 0,
-          workConditions: data.score?.workConditions ?? 0,
-          benefits: data.score?.benefits ?? 0,
-          accessibility: data.score?.accessibility ?? 0,
-          appeal: data.score?.appeal ?? 0,
-        },
-
         marketSummary: Array.isArray(data.marketSummary)
           ? data.marketSummary
           : [],
 
-        improvementPoints: Array.isArray(data.improvementPoints)
-          ? data.improvementPoints
+        targetAnalysis: Array.isArray(data.targetAnalysis)
+          ? data.targetAnalysis
           : [],
+
+        catchCopyCandidates: Array.isArray(data.catchCopyCandidates)
+          ? data.catchCopyCandidates
+          : [],
+
+        advice: {
+          salaryAdvice: {
+            currentSalary: data.advice?.salaryAdvice?.currentSalary ?? "",
+            suggestedRange: data.advice?.salaryAdvice?.suggestedRange ?? "",
+            reason: data.advice?.salaryAdvice?.reason ?? "",
+            note: data.advice?.salaryAdvice?.note ?? "",
+          },
+          conditionSuggestions: Array.isArray(data.advice?.conditionSuggestions)
+            ? data.advice.conditionSuggestions
+            : [],
+          contentAdvice: Array.isArray(data.advice?.contentAdvice)
+            ? data.advice.contentAdvice
+            : [],
+          targetAdvice: Array.isArray(data.advice?.targetAdvice)
+            ? data.advice.targetAdvice
+            : [],
+        },
 
         job: {
           title: data.job?.title ?? "",
@@ -972,8 +1000,12 @@ function App() {
           workingHours: data.job?.workingHours ?? "",
           location: data.job?.location ?? "",
           employmentType: data.job?.employmentType ?? "",
-          benefits: data.job?.benefits ?? "",
-          appealPoints: data.job?.appealPoints ?? "",
+          benefits: Array.isArray(data.job?.benefits)
+            ? data.job.benefits.join("\n")
+            : (data.job?.benefits ?? ""),
+          appealPoints: Array.isArray(data.job?.appealPoints)
+            ? data.job.appealPoints.join("\n")
+            : (data.job?.appealPoints ?? ""),
         },
       };
 
@@ -1126,11 +1158,12 @@ function App() {
 
         validThrough: form.validThrough,
 
-        /* AI分析結果 */
+        /* AI分析・採用アドバイス */
         nearestStations: result.nearestStations,
-        score: result.score,
         marketSummary: result.marketSummary,
-        improvementPoints: result.improvementPoints,
+        targetAnalysis: result.targetAnalysis,
+        catchCopyCandidates: result.catchCopyCandidates,
+        advice: result.advice,
 
         /* AI生成求人 */
         aiTitle: result.job.title,
@@ -1325,26 +1358,38 @@ function App() {
         setSelectedJobOptions(descriptions);
         setJobDescriptionOther("");
 
-        const score: Score = {
-          total: Number(job.score?.total ?? 0),
-          salary: Number(job.score?.salary ?? 0),
-          workConditions: Number(job.score?.workConditions ?? 0),
-          benefits: Number(job.score?.benefits ?? 0),
-          accessibility: Number(job.score?.accessibility ?? 0),
-          appeal: Number(job.score?.appeal ?? 0),
-        };
-
         setResult({
           nearestStations: Array.isArray(job.nearest_stations)
             ? job.nearest_stations
             : [],
-          score,
           marketSummary: Array.isArray(job.market_summary)
             ? job.market_summary
             : [],
-          improvementPoints: Array.isArray(job.improvement_points)
-            ? job.improvement_points
+          targetAnalysis: Array.isArray(job.target_analysis)
+            ? job.target_analysis
             : [],
+          catchCopyCandidates: Array.isArray(job.catch_copy_candidates)
+            ? job.catch_copy_candidates
+            : [],
+          advice: {
+            salaryAdvice: {
+              currentSalary: job.advice?.salaryAdvice?.currentSalary ?? "",
+              suggestedRange: job.advice?.salaryAdvice?.suggestedRange ?? "",
+              reason: job.advice?.salaryAdvice?.reason ?? "",
+              note: job.advice?.salaryAdvice?.note ?? "",
+            },
+            conditionSuggestions: Array.isArray(
+              job.advice?.conditionSuggestions,
+            )
+              ? job.advice.conditionSuggestions
+              : [],
+            contentAdvice: Array.isArray(job.advice?.contentAdvice)
+              ? job.advice.contentAdvice
+              : [],
+            targetAdvice: Array.isArray(job.advice?.targetAdvice)
+              ? job.advice.targetAdvice
+              : [],
+          },
           job: {
             title: job.ai_title ?? job.title ?? "",
             catchCopy: job.catch_copy ?? "",
@@ -2690,16 +2735,15 @@ function App() {
             {loading ? (
               <>
                 <span className="spinner"></span>
-                AIが求人市場を分析しています...
+                AIが求人と採用条件を分析しています...
               </>
             ) : (
-              <>✨ AIで求人票を作成・分析</>
+              <>✨ AIで求人票を作成</>
             )}
           </button>
 
           <p className="generate-note">
-            求人票の作成だけでなく、
-            応募を増やすための改善ポイントもAIが分析します。
+            求人票の作成に加えて、ターゲットに合わせた採用アドバイスも提案します。
           </p>
         </section>
 
@@ -2711,77 +2755,125 @@ function App() {
           <section id="analysis-result" className="card generated-card">
             <div className="section-title">
               <span>🎉</span>
-              <h2>AI分析結果</h2>
+              <h2>AI生成結果・採用アドバイス</h2>
             </div>
 
-            {/* スコア */}
+            {/* 採用アドバイス */}
             <div className="result-block">
-              <h3>🎯 求人AIスコア</h3>
+              <h3>💡 AIからの採用アドバイス</h3>
 
-              <div className="score-total">
-                <strong>{result.score?.total ?? 0}</strong>
-
-                <span>/100</span>
-              </div>
-
-              <div className="score-grid">
-                <div>
-                  <span>給与</span>
-                  <strong>{result.score?.salary ?? 0}</strong>
+              {(result.advice.salaryAdvice.currentSalary ||
+                result.advice.salaryAdvice.suggestedRange ||
+                result.advice.salaryAdvice.reason) && (
+                <div className="improvement-item">
+                  <h4>💰 給与について</h4>
+                  {result.advice.salaryAdvice.currentSalary && (
+                    <p>
+                      <strong>現在：</strong>
+                      {formatText(result.advice.salaryAdvice.currentSalary)}
+                    </p>
+                  )}
+                  {result.advice.salaryAdvice.suggestedRange && (
+                    <p>
+                      <strong>検討目安：</strong>
+                      {formatText(result.advice.salaryAdvice.suggestedRange)}
+                    </p>
+                  )}
+                  {result.advice.salaryAdvice.reason && (
+                    <p>
+                      <strong>理由：</strong>
+                      {formatText(result.advice.salaryAdvice.reason)}
+                    </p>
+                  )}
+                  {result.advice.salaryAdvice.note && (
+                    <p className="help-text">
+                      {formatText(result.advice.salaryAdvice.note)}
+                    </p>
+                  )}
                 </div>
+              )}
 
-                <div>
-                  <span>勤務条件</span>
-                  <strong>{result.score?.workConditions ?? 0}</strong>
-                </div>
-
-                <div>
-                  <span>待遇</span>
-                  <strong>{result.score?.benefits ?? 0}</strong>
-                </div>
-
-                <div>
-                  <span>訴求力</span>
-                  <strong>{result.score?.appeal ?? 0}</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* 市場傾向 */}
-            <div className="result-block">
-              <h3>📊 求人市場の傾向</h3>
-
-              <ul>
-                {result.marketSummary.map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* 改善ポイント */}
-            <div className="result-block">
-              <h3>🚀 応募を増やすための改善ポイント</h3>
-
-              {result.improvementPoints.map((point) => (
-                <div className="improvement-item" key={point.priority}>
-                  <div className="improvement-priority">
-                    優先度 {point.priority}
-                  </div>
-
-                  <h4>{formatText(point.title)}</h4>
-
+              {result.advice.conditionSuggestions.map((item, index) => (
+                <div className="improvement-item" key={`condition-${index}`}>
+                  <h4>➕ {formatText(item.title)}</h4>
                   <p>
-                    <strong>理由：</strong>
-                    {formatText(point.reason)}
+                    <strong>期待できる効果：</strong>
+                    {formatText(item.reason)}
                   </p>
+                  {item.target && (
+                    <p>
+                      <strong>特に相性の良い層：</strong>
+                      {formatText(item.target)}
+                    </p>
+                  )}
+                </div>
+              ))}
 
-                  <p>
-                    <strong>おすすめ：</strong>
-                    {formatText(point.recommendation)}
-                  </p>
+              {result.advice.contentAdvice.map((item, index) => (
+                <div className="improvement-item" key={`content-${index}`}>
+                  <h4>✍️ {formatText(item.title)}</h4>
+                  <p>{formatText(item.recommendation)}</p>
                 </div>
               ))}
             </div>
+
+            {result.advice.targetAdvice.length > 0 && (
+              <div className="result-block">
+                <h3>🎯 ターゲット別の訴求アドバイス</h3>
+                {result.advice.targetAdvice.map((item, index) => (
+                  <div
+                    className="improvement-item"
+                    key={`target-advice-${index}`}
+                  >
+                    <h4>{formatText(item.target)}</h4>
+                    {item.effectiveAppeals.length > 0 && (
+                      <p>
+                        <strong>刺さりやすいポイント：</strong>
+                        {item.effectiveAppeals.join("、")}
+                      </p>
+                    )}
+                    {item.message && (
+                      <p>
+                        <strong>伝え方：</strong>
+                        {formatText(item.message)}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {result.marketSummary.length > 0 && (
+              <div className="result-block">
+                <h3>📊 求人市場の傾向</h3>
+                <ul>
+                  {result.marketSummary.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {result.catchCopyCandidates.length > 0 && (
+              <div className="result-block">
+                <h3>✨ キャッチコピー候補</h3>
+                <p className="help-text">
+                  クリックすると求人票のキャッチコピーに反映します。
+                </p>
+                <div className="button-group">
+                  {result.catchCopyCandidates.map((candidate, index) => (
+                    <button
+                      type="button"
+                      className="select-button"
+                      key={`catch-${index}`}
+                      onClick={() => updateGeneratedJob("catchCopy", candidate)}
+                    >
+                      {candidate}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 求人票 */}
             <div className="result-block">

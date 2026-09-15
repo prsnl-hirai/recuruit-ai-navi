@@ -68,9 +68,10 @@ export default async function handler(req: any, res: any) {
         aiRequest,
 
         nearestStations,
-        score,
         marketSummary,
-        improvementPoints,
+        targetAnalysis,
+        catchCopyCandidates,
+        advice,
 
         aiTitle,
         catchCopy,
@@ -182,9 +183,10 @@ export default async function handler(req: any, res: any) {
           ai_request,
 
           nearest_stations,
-          score,
           market_summary,
-          improvement_points,
+          target_analysis,
+          catch_copy_candidates,
+          advice,
 
           ai_title,
           catch_copy,
@@ -259,9 +261,10 @@ export default async function handler(req: any, res: any) {
           ${aiRequest || null},
 
           ${JSON.stringify(nearestStations || [])},
-          ${JSON.stringify(score || {})},
           ${JSON.stringify(marketSummary || [])},
-          ${JSON.stringify(improvementPoints || [])},
+          ${JSON.stringify(targetAnalysis || [])},
+          ${JSON.stringify(catchCopyCandidates || [])},
+          ${JSON.stringify(advice || {})},
 
           ${aiTitle || null},
           ${catchCopy || null},
@@ -395,9 +398,10 @@ export default async function handler(req: any, res: any) {
           aiRequest,
 
           nearestStations,
-          score,
           marketSummary,
-          improvementPoints,
+          targetAnalysis,
+          catchCopyCandidates,
+          advice,
 
           aiTitle,
           catchCopy,
@@ -609,11 +613,13 @@ export default async function handler(req: any, res: any) {
 
         nearest_stations = ${JSON.stringify(nearestStations || [])},
 
-        score = ${JSON.stringify(score || {})},
-
         market_summary = ${JSON.stringify(marketSummary || [])},
 
-        improvement_points = ${JSON.stringify(improvementPoints || [])},
+        target_analysis = ${JSON.stringify(targetAnalysis || [])},
+
+        catch_copy_candidates = ${JSON.stringify(catchCopyCandidates || [])},
+
+        advice = ${JSON.stringify(advice || {})},
 
         ai_title = ${aiTitle || null},
         catch_copy = ${catchCopy || null},
