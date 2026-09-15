@@ -193,14 +193,17 @@ export default async function handler(req: any, res: any) {
   
   勤務地：
   ${job.location}
+
+  最寄り駅：
+  ${job.nearestStationName || "未指定"}
+
+  駅から徒歩：
+  ${job.nearestStationWalkMinutes ? `${job.nearestStationWalkMinutes}分` : "未指定"}
   
-  勤務地については、
-  住所から判断できる範囲で最寄り駅を推定してください。
-  
-  ただし、正確な距離が分からない場合は、
-  「徒歩約○分」などの断定を避け、
-  「約○m程度」など大まかな表現にしてください。
-  最寄り駅がある場合は、他の徒歩10分以上の駅は記載しないでください。
+  最寄り駅と徒歩分数が入力されている場合は、その情報を最優先で使用してください。
+  入力済みの駅名や徒歩分数を推測で変更してはいけません。
+  最寄り駅が未入力の場合のみ、住所から判断できる範囲で推定してください。
+  正確な距離が分からない場合は断定せず、大まかな表現にしてください。
   
   ━━━━━━━━━━━━━━━━━━━━
   【勤務条件】
@@ -400,6 +403,29 @@ export default async function handler(req: any, res: any) {
   ・応募者が実際に働く姿を想像できるよう、具体的かつ分かりやすく説明する
   ・専門用語を必要以上に使わない
   ・未経験者がターゲットの場合は「自分にもできそう」と感じられる説明を優先する
+  ・description は短い要約で終わらせず、原則600〜1000文字程度を目安にする
+  ・仕事内容だけを箇条書きで並べず、「どんな仕事か」「具体的に何をするか」「どのように仕事を進めるか」「この仕事の魅力」が自然に伝わる文章にする
+  ・入力情報から確認できる場合は、担当業務をいくつかのまとまりに分け、読みやすく説明する
+  ・未経験OKや研修あり等の情報が入力されている場合は、仕事を始める際の安心材料として具体的に説明する
+  ・ターゲットに関連する勤務条件や職場環境が入力されている場合は、仕事内容の説明の中にも自然に関連付ける
+  ・同じ内容の言い換えだけで文字数を増やさない
+  ・入力情報が少ない場合も、存在しない業務や制度を作らず、確認できる仕事内容を分かりやすく丁寧に掘り下げる
+
+  【求人文章のボリューム】
+  求人票全体が簡素になりすぎないよう、各項目は次を目安に十分な情報量で作成してください。
+
+  ・title：30〜60文字程度。職種だけでなく、入力済みの魅力的な条件を自然に含める
+  ・catchCopy：45〜90文字程度。具体的な条件やメリットを1〜2個入れる
+  ・description：600〜1000文字程度。求人票の中心となるため、最も丁寧に書く
+  ・requirements：250〜450文字程度。応募資格だけでなく、どんな人に向いているかを入力情報の範囲で説明する
+  ・salary：150〜300文字程度。給与額、昇給、賞与、試用期間など入力済みの給与関連情報を整理して説明する
+  ・workingHours：250〜450文字程度。勤務時間、シフト、最低勤務日数・時間、休憩、休日、残業など入力済み情報をまとめる
+  ・location：100〜220文字程度。住所、最寄り駅、徒歩分数などを分かりやすくまとめる
+  ・benefits：入力されている内容を5〜10項目程度の読みやすい文に整理する。入力数が少ない場合は無理に増やさない
+  ・appealPoints：3〜6項目程度。それぞれ単語だけではなく、なぜ魅力なのかが伝わる1〜3文程度の説明にする
+
+  文章量を増やすために、存在しない情報を追加してはいけません。
+  情報が不足している場合は、入力された事実を応募者目線で分かりやすく説明し直し、具体性を高めてください。
 
   【応募への不安を減らす】
   入力情報の中に、未経験OK、研修あり、シフト相談可能、交通費支給、駅から近い、短時間勤務可能など
@@ -445,34 +471,34 @@ export default async function handler(req: any, res: any) {
   以下の項目を作成してください。
   
   title：
-  求人タイトル
+  求人タイトル。職種名だけで終わらせず、入力済みの魅力的な条件を自然に含める
   
   catchCopy：
-  応募者の興味を引くキャッチコピー
+  応募者の興味を引くキャッチコピー。具体的な条件・メリットを入れ、45〜90文字程度を目安にする
   
   description：
-  仕事内容
+  仕事内容。原則600〜1000文字程度を目安にし、応募者が実際の仕事を具体的に想像できる文章にする
   
   requirements：
-  応募資格・求める人物像
+  応募資格・求める人物像。原則250〜450文字程度を目安にし、入力済み条件とターゲットに合わせて丁寧に説明する
   
   salary：
-  給与
+  給与。原則150〜300文字程度を目安にし、給与額だけでなく入力済みの昇給・賞与・試用期間等も分かりやすく整理する
   
   workingHours：
-  勤務時間・休日・残業など
+  勤務時間・休日・残業など。原則250〜450文字程度を目安にし、シフトや最低勤務日数・時間等も入力されていれば含める
   
   location：
-  勤務地
+  勤務地。最寄り駅と徒歩分数が入力されている場合は「○○駅から徒歩○分」のアクセス情報も必ず含める
   
   employmentType：
   雇用形態
   
   benefits：
-  待遇・福利厚生
+  待遇・福利厚生。入力された内容を単語の羅列にせず、応募者がメリットを理解しやすい表現に整える
   
   appealPoints：
-  この求人の魅力
+  この求人の魅力。3〜6項目程度を目安にし、各項目は単語だけでなく、入力情報に基づいて1〜3文程度で具体的に説明する
   
   ━━━━━━━━━━━━━━━━━━━━
   【重要】
@@ -565,6 +591,7 @@ export default async function handler(req: any, res: any) {
     const response = await openai.responses.create({
       model: "gpt-5-mini",
       input: prompt,
+      max_output_tokens: 7000,
     });
 
     const output = response.output_text;
@@ -604,13 +631,23 @@ export default async function handler(req: any, res: any) {
          安全なデータ整形
       ========================= */
 
-    const safeNearestStations = Array.isArray(parsed?.nearestStations)
-      ? parsed.nearestStations.map((station: any) => ({
-          stationName: station?.stationName || "",
-          lineName: station?.lineName || "",
-          estimatedDistance: station?.estimatedDistance || "",
-        }))
-      : [];
+    const safeNearestStations = job.nearestStationName
+      ? [
+          {
+            stationName: String(job.nearestStationName),
+            lineName: "",
+            estimatedDistance: job.nearestStationWalkMinutes
+              ? `徒歩${job.nearestStationWalkMinutes}分`
+              : "",
+          },
+        ]
+      : Array.isArray(parsed?.nearestStations)
+        ? parsed.nearestStations.map((station: any) => ({
+            stationName: station?.stationName || "",
+            lineName: station?.lineName || "",
+            estimatedDistance: station?.estimatedDistance || "",
+          }))
+        : [];
 
     const safeMarketSummary = Array.isArray(parsed?.marketSummary)
       ? parsed.marketSummary.filter(
@@ -667,6 +704,16 @@ export default async function handler(req: any, res: any) {
         : [],
     };
 
+    const manualAccess = job.nearestStationName
+      ? `${job.nearestStationName}駅${job.nearestStationWalkMinutes ? `から徒歩${job.nearestStationWalkMinutes}分` : ""}`
+      : "";
+
+    const parsedLocation = parsed?.job?.location || "";
+    const safeLocation =
+      manualAccess && !parsedLocation.includes(String(job.nearestStationName))
+        ? [parsedLocation, manualAccess].filter(Boolean).join("\n")
+        : parsedLocation;
+
     const safeJob = {
       title: parsed?.job?.title || "",
 
@@ -680,7 +727,7 @@ export default async function handler(req: any, res: any) {
 
       workingHours: parsed?.job?.workingHours || "",
 
-      location: parsed?.job?.location || "",
+      location: safeLocation,
 
       employmentType: parsed?.job?.employmentType || "",
 

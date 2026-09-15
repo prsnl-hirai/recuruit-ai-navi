@@ -322,6 +322,18 @@ export default async function handler(req: any, res: any) {
 
     const location = fullLocation || job.ai_location || job.location || "";
 
+    const nearestStationName = String(job.nearest_station_name || "").trim();
+    const nearestStationWalkMinutes = String(
+      job.nearest_station_walk_minutes ?? "",
+    ).trim();
+    const accessText = nearestStationName
+      ? `${nearestStationName}駅${
+          nearestStationWalkMinutes
+            ? `から徒歩${nearestStationWalkMinutes}分`
+            : ""
+        }`
+      : "";
+
     const employmentType = job.ai_employment_type || job.employment_type || "";
 
     // generate-job.ts の新しい返却形式では benefits / appealPoints は配列。
@@ -741,6 +753,16 @@ export default async function handler(req: any, res: any) {
               : ""
           }
 
+          ${
+            accessText
+              ? `
+                <span class="tag">
+                  🚉 ${escapeHtml(accessText)}
+                </span>
+              `
+              : ""
+          }
+
         </div>
 
       </div>
@@ -829,6 +851,7 @@ export default async function handler(req: any, res: any) {
                       : ""
                   }
                   ${nl2br(location)}
+                  ${accessText ? `<br>🚉 ${escapeHtml(accessText)}` : ""}
                 </div>
               </section>
             `

@@ -1450,6 +1450,13 @@ function App() {
     });
   };
 
+  const scrollToSection = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   if (currentPage === "subsidy") {
     return (
       <SubsidyDiagnosis
@@ -1604,6 +1611,62 @@ function App() {
       </div>
 
       {/* ====================================
+          ページ内ナビゲーション
+      ==================================== */}
+      <nav
+        aria-label="ページ内移動"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 30,
+          background: "rgba(255,255,255,0.96)",
+          borderBottom: "1px solid #e5e7eb",
+          backdropFilter: "blur(8px)",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "700px",
+            margin: "0 auto",
+            padding: "10px 16px",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: "8px",
+          }}
+        >
+          <button
+            type="button"
+            className="select-button"
+            onClick={() => scrollToSection("input-area")}
+          >
+            📝 情報入力
+          </button>
+          <button
+            type="button"
+            className="select-button"
+            disabled={!result}
+            onClick={() => scrollToSection("advice-area")}
+            style={
+              !result ? { opacity: 0.45, cursor: "not-allowed" } : undefined
+            }
+          >
+            💡 アドバイス
+          </button>
+          <button
+            type="button"
+            className="select-button"
+            disabled={!result}
+            onClick={() => scrollToSection("job-area")}
+            style={
+              !result ? { opacity: 0.45, cursor: "not-allowed" } : undefined
+            }
+          >
+            👀 求人
+          </button>
+        </div>
+      </nav>
+
+      {/* ====================================
           Main
       ==================================== */}
 
@@ -1618,7 +1681,11 @@ function App() {
             基本情報
         ================================== */}
 
-        <section className="card">
+        <section
+          id="input-area"
+          className="card"
+          style={{ scrollMarginTop: "90px" }}
+        >
           <div className="section-title">
             <span>📌</span>
             <h2>基本情報</h2>
@@ -2759,7 +2826,11 @@ function App() {
             </div>
 
             {/* 採用アドバイス */}
-            <div className="result-block">
+            <div
+              id="advice-area"
+              className="result-block"
+              style={{ scrollMarginTop: "90px" }}
+            >
               <h3>💡 AIからの採用アドバイス</h3>
 
               {(result.advice.salaryAdvice.currentSalary ||
@@ -2876,7 +2947,11 @@ function App() {
             )}
 
             {/* 求人票 */}
-            <div className="result-block">
+            <div
+              id="job-area"
+              className="result-block"
+              style={{ scrollMarginTop: "90px" }}
+            >
               <h3>📝 AIが作成した求人票</h3>
 
               <div className="generated-edit-field">
@@ -2969,6 +3044,203 @@ function App() {
                   }
                   rows={6}
                 />
+              </div>
+            </div>
+
+            {/* 公開求人ページプレビュー */}
+            <div className="result-block">
+              <h3>👀 求人ページプレビュー</h3>
+              <p className="help-text">
+                保存・公開する前に、求職者から見える求人ページのイメージを確認できます。
+                上の求人票を編集すると、このプレビューにもすぐ反映されます。
+              </p>
+
+              <div
+                style={{
+                  marginTop: "16px",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "16px",
+                  overflow: "hidden",
+                  background: "#fff",
+                  boxShadow: "0 3px 14px rgba(0,0,0,0.04)",
+                }}
+              >
+                <div style={{ padding: "28px 24px" }}>
+                  {form.storeName && (
+                    <div
+                      style={{
+                        color: "#555",
+                        fontSize: "14px",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      {form.storeName}
+                    </div>
+                  )}
+
+                  <h2
+                    style={{
+                      margin: "0 0 10px",
+                      fontSize: "26px",
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    {result.job.title || "求人タイトル"}
+                  </h2>
+
+                  {result.job.catchCopy && (
+                    <p
+                      style={{
+                        margin: "0 0 20px",
+                        color: "#2563eb",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {result.job.catchCopy}
+                    </p>
+                  )}
+
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
+                  >
+                    {result.job.employmentType && (
+                      <span
+                        style={{
+                          padding: "6px 11px",
+                          background: "#f3f4f6",
+                          borderRadius: "999px",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {result.job.employmentType}
+                      </span>
+                    )}
+                    {result.job.salary && (
+                      <span
+                        style={{
+                          padding: "6px 11px",
+                          background: "#f3f4f6",
+                          borderRadius: "999px",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {result.job.salary.split("\n")[0]}
+                      </span>
+                    )}
+                    {result.job.location && (
+                      <span
+                        style={{
+                          padding: "6px 11px",
+                          background: "#f3f4f6",
+                          borderRadius: "999px",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        📍 {result.job.location.split("\n")[0]}
+                      </span>
+                    )}
+                    {form.nearestStationName && (
+                      <span
+                        style={{
+                          padding: "6px 11px",
+                          background: "#f3f4f6",
+                          borderRadius: "999px",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        🚉 {form.nearestStationName}
+                        {form.nearestStationWalkMinutes
+                          ? `から徒歩${form.nearestStationWalkMinutes}分`
+                          : ""}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    padding: "20px 24px",
+                    background: "#f8fafc",
+                    borderTop: "1px solid #e5e7eb",
+                    borderBottom: "1px solid #e5e7eb",
+                  }}
+                >
+                  <button
+                    type="button"
+                    disabled
+                    style={{
+                      width: "100%",
+                      padding: "14px 18px",
+                      border: "none",
+                      borderRadius: "10px",
+                      background: "#2563eb",
+                      color: "#fff",
+                      fontSize: "16px",
+                      fontWeight: 700,
+                      opacity: 0.75,
+                    }}
+                  >
+                    この求人に応募する
+                  </button>
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      textAlign: "center",
+                      color: "#6b7280",
+                      fontSize: "12px",
+                    }}
+                  >
+                    ※プレビューのため応募ボタンは押せません
+                  </div>
+                </div>
+
+                <div style={{ padding: "4px 24px 24px" }}>
+                  {[
+                    ["仕事内容", result.job.description],
+                    ["応募資格・求める人物像", result.job.requirements],
+                    ["給与", result.job.salary],
+                    ["勤務時間", result.job.workingHours],
+                    ["勤務地", result.job.location],
+                    ["雇用形態", result.job.employmentType],
+                    ["待遇・福利厚生", result.job.benefits],
+                    ["この求人の魅力", result.job.appealPoints],
+                  ].map(([label, value]) =>
+                    value ? (
+                      <div
+                        key={label}
+                        style={{
+                          padding: "22px 0",
+                          borderBottom: "1px solid #eeeeee",
+                        }}
+                      >
+                        <h3 style={{ margin: "0 0 10px", fontSize: "18px" }}>
+                          {label}
+                        </h3>
+                        <div
+                          style={{
+                            whiteSpace: "pre-wrap",
+                            color: "#374151",
+                            lineHeight: 1.8,
+                          }}
+                        >
+                          {value}
+                        </div>
+                        {label === "勤務地" && form.nearestStationName && (
+                          <div style={{ marginTop: "10px", fontWeight: 700 }}>
+                            🚉 {form.nearestStationName}
+                            {form.nearestStationWalkMinutes
+                              ? `から徒歩${form.nearestStationWalkMinutes}分`
+                              : ""}
+                          </div>
+                        )}
+                      </div>
+                    ) : null,
+                  )}
+                </div>
               </div>
             </div>
 
