@@ -29,6 +29,11 @@ type PublicJob = {
   location: string | null;
   ai_location: string | null;
 
+  nearest_station_name?: string | null;
+  nearest_station_walk_minutes?: string | null;
+  catch_copy?: string | null;
+  ai_catch_copy?: string | null;
+
   job_description: string | null;
   ai_description: string | null;
 
@@ -40,6 +45,8 @@ export default function PublicJobList() {
   const [jobs, setJobs] = useState<PublicJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [employmentFilter, setEmploymentFilter] = useState("");
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -121,6 +128,46 @@ export default function PublicJobList() {
     return `${description.slice(0, 100)}...`;
   };
 
+  const employmentTypes = Array.from(
+    new Set(
+      jobs
+        .map((job) => getEmploymentType(job))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  const filteredJobs = jobs.filter((job) => {
+    const searchText = [
+      getTitle(job),
+      job.company_name || "",
+      getLocation(job),
+      getDescription(job),
+      job.nearest_station_name || "",
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    const normalizedKeyword = keyword.trim().toLowerCase();
+    const matchesKeyword =
+      !normalizedKeyword || searchText.includes(normalizedKeyword);
+    const matchesEmployment =
+      !employmentFilter || getEmploymentType(job) === employmentFilter;
+
+    return matchesKeyword && matchesEmployment;
+  });
+
+  const getAccess = (job: PublicJob) => {
+    if (!job.nearest_station_name) return "";
+    const station = job.nearest_station_name.replace(/駅+$/g, "");
+    return job.nearest_station_walk_minutes
+      ? `${station}駅から徒歩${job.nearest_station_walk_minutes}分`
+      : `${station}駅`;
+  };
+
+  const getCatchCopy = (job: PublicJob) => {
+    return job.ai_catch_copy || job.catch_copy || "";
+  };
+
   if (loading) {
     return (
       <div style={styles.page}>
@@ -136,18 +183,50 @@ export default function PublicJobList() {
       <header style={styles.header}>
         <div style={styles.headerInner}>
           <a href="/" style={styles.logo}>
-            求人AIナビ
+            TERRACE JOBS
           </a>
         </div>
       </header>
 
       <main style={styles.container}>
         <div style={styles.pageTitleArea}>
-          <h1 style={styles.pageTitle}>公開求人一覧</h1>
+          <div style={styles.brandTag}>TERRACE JOBS</div>
+          <h1 style={styles.pageTitle}>あなたに合う仕事を見つけよう</h1>
 
           <p style={styles.pageDescription}>
-            求人AIナビに掲載されている求人情報です。
+            仕事との出会いを、もっとシンプルに。
           </p>
+        </div>
+
+        <div style={styles.searchPanel}>
+          <div style={styles.searchField}>
+            <label style={styles.searchLabel}>キーワード</label>
+            <input
+              type="search"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="職種・会社名・勤務地・駅名"
+              style={styles.searchInput}
+            />
+          </div>
+
+          <div style={styles.searchField}>
+            <label style={styles.searchLabel}>雇用形態</label>
+            <select
+              value={employmentFilter}
+              onChange={(e) => setEmploymentFilter(e.target.value)}
+              style={styles.searchInput}
+            >
+              <option value="">すべて</option>
+              {employmentTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={styles.resultCount}>{filteredJobs.length}件の求人</div>
         </div>
 
         {errorMessage && <div style={styles.error}>{errorMessage}</div>}
@@ -156,13 +235,21 @@ export default function PublicJobList() {
           <div style={styles.empty}>現在公開中の求人はありません。</div>
         )}
 
+        {!errorMessage && jobs.length > 0 && filteredJobs.length === 0 && (
+          <div style={styles.empty}>
+            条件に一致する求人がありません。検索条件を変更してみてください。
+          </div>
+        )}
+
         <div style={styles.jobList}>
-          {jobs.map((job) => {
+          {filteredJobs.map((job) => {
             const title = getTitle(job);
             const employmentType = getEmploymentType(job);
             const salary = getSalary(job);
             const location = getLocation(job);
             const description = getDescription(job);
+            const access = getAccess(job);
+            const catchCopy = getCatchCopy(job);
 
             return (
               <article key={job.id} style={styles.jobCard}>
@@ -178,6 +265,8 @@ export default function PublicJobList() {
                 {job.company_name && (
                   <div style={styles.companyName}>{job.company_name}</div>
                 )}
+
+                {catchCopy && <p style={styles.catchCopy}>{catchCopy}</p>}
 
                 <div style={styles.metaList}>
                   {employmentType && (
@@ -198,6 +287,13 @@ export default function PublicJobList() {
                     <div style={styles.metaItem}>
                       <span>勤務地</span>
                       <strong>{location}</strong>
+                    </div>
+                  )}
+
+                  {access && (
+                    <div style={styles.metaItem}>
+                      <span>アクセス</span>
+                      <strong>{access}</strong>
                     </div>
                   )}
                 </div>
@@ -231,7 +327,7 @@ export default function PublicJobList() {
           </a>
         </div>
 
-        <div style={styles.copyright}>© 求人AIナビ</div>
+        <div style={styles.copyright}>© TERRACE JOBS</div>
       </footer>
     </div>
   );
@@ -240,7 +336,7 @@ export default function PublicJobList() {
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
-    background: "#f7f8fa",
+    background: "#f6f8fc",
     color: "#222",
   },
 
@@ -250,37 +346,92 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   headerInner: {
-    maxWidth: "900px",
+    maxWidth: "1040px",
     margin: "0 auto",
-    padding: "16px 20px",
+    padding: "18px 20px",
   },
 
   logo: {
-    fontSize: "20px",
-    fontWeight: "700",
-    color: "#111",
+    fontSize: "22px",
+    fontWeight: "800",
+    letterSpacing: "0.04em",
+    color: "#2563eb",
     textDecoration: "none",
   },
 
   container: {
-    maxWidth: "900px",
+    maxWidth: "1040px",
     margin: "0 auto",
-    padding: "32px 20px 60px",
+    padding: "42px 20px 72px",
   },
 
   pageTitleArea: {
-    marginBottom: "28px",
+    marginBottom: "24px",
+  },
+
+  brandTag: {
+    marginBottom: "8px",
+    color: "#2563eb",
+    fontSize: "12px",
+    fontWeight: "800",
+    letterSpacing: "0.12em",
   },
 
   pageTitle: {
-    margin: "0 0 8px",
-    fontSize: "28px",
+    margin: "0 0 10px",
+    fontSize: "clamp(26px, 5vw, 38px)",
+    lineHeight: 1.3,
   },
 
   pageDescription: {
     margin: 0,
     color: "#666",
     lineHeight: 1.7,
+  },
+
+  searchPanel: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+    gap: "14px",
+    padding: "18px",
+    marginBottom: "24px",
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    boxShadow: "0 2px 10px rgba(15,23,42,0.04)",
+  },
+
+  searchField: {
+    flex: "1 1 240px",
+  },
+
+  searchLabel: {
+    display: "block",
+    marginBottom: "7px",
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "#374151",
+  },
+
+  searchInput: {
+    width: "100%",
+    height: "46px",
+    boxSizing: "border-box",
+    padding: "0 13px",
+    border: "1px solid #d1d5db",
+    borderRadius: "9px",
+    background: "#fff",
+    color: "#111827",
+    fontSize: "15px",
+  },
+
+  resultCount: {
+    padding: "0 4px 12px",
+    color: "#6b7280",
+    fontSize: "13px",
+    fontWeight: "600",
+    whiteSpace: "nowrap",
   },
 
   error: {
@@ -306,11 +457,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   jobCard: {
-    padding: "22px",
+    padding: "24px",
     background: "#fff",
     border: "1px solid #e5e7eb",
-    borderRadius: "12px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+    borderRadius: "16px",
+    boxShadow: "0 3px 14px rgba(15,23,42,0.05)",
   },
 
   jobTitle: {
@@ -325,9 +476,18 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   companyName: {
-    marginBottom: "16px",
+    marginBottom: "10px",
     color: "#555",
     fontSize: "14px",
+    fontWeight: "600",
+  },
+
+  catchCopy: {
+    margin: "0 0 16px",
+    color: "#2563eb",
+    fontSize: "14px",
+    fontWeight: "700",
+    lineHeight: 1.7,
   },
 
   metaList: {
@@ -360,7 +520,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "inline-block",
     padding: "10px 18px",
     borderRadius: "8px",
-    background: "#111",
+    background: "#2563eb",
     color: "#fff",
     textDecoration: "none",
     fontWeight: "600",

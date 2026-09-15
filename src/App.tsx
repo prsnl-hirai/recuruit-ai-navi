@@ -621,8 +621,8 @@ function App() {
     const initLiff = async () => {
       try {
         await liff.init({
-          // liffId: "2011376548-9M89rhkF",
-          liffId: "",
+          liffId: "2011376548-9M89rhkF",
+          // liffId: "",
           withLoginOnExternalBrowser: true,
         });
 
