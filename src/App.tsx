@@ -1594,28 +1594,35 @@ function App() {
           }
         }
 
-        .station-input-wrap {
+        .input-with-suffix {
           display: flex;
           align-items: stretch;
           width: 100%;
         }
 
-        .station-input-wrap input {
+        .input-with-suffix input {
           flex: 1;
           min-width: 0;
+          height: 56px;
+          box-sizing: border-box;
           border-radius: 10px 0 0 10px !important;
           border-right: 0 !important;
+          margin: 0 !important;
         }
 
-        .station-suffix {
+        .input-suffix {
+          width: 58px;
+          min-width: 58px;
+          height: 56px;
+          box-sizing: border-box;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 0 14px;
           border: 1px solid #d1d5db;
           border-left: 0;
           border-radius: 0 10px 10px 0;
           background: #f8fafc;
+          font-size: 16px;
           font-weight: 700;
           color: #374151;
           white-space: nowrap;
@@ -2138,7 +2145,7 @@ function App() {
           <div className="form-row">
             <div className="form-group">
               <label>最寄り駅</label>
-              <div className="station-input-wrap">
+              <div className="input-with-suffix">
                 <input
                   type="text"
                   placeholder="例：伏見"
@@ -2148,15 +2155,13 @@ function App() {
                     setSingleValue("nearestStationName", value);
                   }}
                 />
-                <span className="station-suffix">駅</span>
+                <span className="input-suffix">駅</span>
               </div>
             </div>
 
             <div className="form-group">
               <label>駅から徒歩</label>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
-              >
+              <div className="input-with-suffix">
                 <input
                   type="number"
                   min="0"
@@ -2168,7 +2173,7 @@ function App() {
                     setSingleValue("nearestStationWalkMinutes", e.target.value)
                   }
                 />
-                <span style={{ whiteSpace: "nowrap" }}>分</span>
+                <span className="input-suffix">分</span>
               </div>
             </div>
           </div>
