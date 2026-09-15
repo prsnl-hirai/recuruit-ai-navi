@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import liff from "@line/liff";
 import "./App.css";
+import recruitAiNaviIcon from "./assets/recruit-ai-navi-icon.png";
 import PublishOptions from "./PublishOptions";
 import JobManagement from "./JobManagement";
 import ApplicantManagement from "./ApplicantManagement";
@@ -1592,6 +1593,33 @@ function App() {
             padding-right: 2px !important;
           }
         }
+
+        .station-input-wrap {
+          display: flex;
+          align-items: stretch;
+          width: 100%;
+        }
+
+        .station-input-wrap input {
+          flex: 1;
+          min-width: 0;
+          border-radius: 10px 0 0 10px !important;
+          border-right: 0 !important;
+        }
+
+        .station-suffix {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 14px;
+          border: 1px solid #d1d5db;
+          border-left: 0;
+          border-radius: 0 10px 10px 0;
+          background: #f8fafc;
+          font-weight: 700;
+          color: #374151;
+          white-space: nowrap;
+        }
       `}</style>
 
       {/* ヘッダー + ページ内メニューを1つの固定領域にまとめる */}
@@ -1665,7 +1693,27 @@ function App() {
               }}
             >
               <div className="logo">
-                <div className="logo-icon">🤖</div>
+                <div
+                  className="logo-icon"
+                  style={{
+                    overflow: "hidden",
+                    background: "transparent",
+                    boxShadow: "none",
+                    padding: 0,
+                  }}
+                >
+                  <img
+                    src={recruitAiNaviIcon}
+                    alt="求人AIナビ"
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      borderRadius: "inherit",
+                    }}
+                  />
+                </div>
 
                 <div>
                   <div className="logo-title">求人AIナビ</div>
@@ -2090,14 +2138,18 @@ function App() {
           <div className="form-row">
             <div className="form-group">
               <label>最寄り駅</label>
-              <input
-                type="text"
-                placeholder="例：伏見駅"
-                value={form.nearestStationName}
-                onChange={(e) =>
-                  setSingleValue("nearestStationName", e.target.value)
-                }
-              />
+              <div className="station-input-wrap">
+                <input
+                  type="text"
+                  placeholder="例：伏見"
+                  value={form.nearestStationName}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/駅+$/g, "");
+                    setSingleValue("nearestStationName", value);
+                  }}
+                />
+                <span className="station-suffix">駅</span>
+              </div>
             </div>
 
             <div className="form-group">
