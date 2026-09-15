@@ -255,7 +255,7 @@ export default async function handler(req: any, res: any) {
               name="viewport"
               content="width=device-width, initial-scale=1.0"
             >
-            <title>求人が見つかりません｜求人AIナビ</title>
+            <title>求人が見つかりません｜TERRACE JOBS</title>
           </head>
 
           <body
@@ -485,6 +485,12 @@ export default async function handler(req: any, res: any) {
     content="${escapeHtml(description.replace(/\r?\n/g, " ").slice(0, 150))}"
   >
 
+  <meta property="og:site_name" content="TERRACE JOBS">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="${escapeHtml(jobTitle)}｜${escapeHtml(companyName)}">
+  <meta property="og:description" content="${escapeHtml(description.replace(/\r?\n/g, " ").slice(0, 150))}">
+  <meta property="og:url" content="${escapeHtml(publicUrl)}">
+
   <link
     rel="canonical"
     href="${escapeHtml(publicUrl)}"
@@ -521,9 +527,33 @@ export default async function handler(req: any, res: any) {
     .header-inner {
       width: min(900px, 100%);
       margin: 0 auto;
-      padding: 18px 20px;
-      font-size: 18px;
-      font-weight: 700;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      text-decoration: none;
+    }
+
+    .brand-name {
+      color: #111827;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      line-height: 1.2;
+    }
+
+    .brand-copy {
+      color: #6b7280;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.4;
     }
 
     .container {
@@ -652,6 +682,18 @@ export default async function handler(req: any, res: any) {
       max-width: 600px
     ) {
 
+      .header-inner {
+        padding: 10px 14px;
+      }
+
+      .brand-name {
+        font-size: 18px;
+      }
+
+      .brand-copy {
+        font-size: 10px;
+      }
+
       .container {
         margin-top: 14px;
         padding:
@@ -687,7 +729,10 @@ export default async function handler(req: any, res: any) {
 
   <header class="header">
     <div class="header-inner">
-      求人AIナビ
+      <a class="brand" href="/jobs" aria-label="TERRACE JOBS 求人一覧へ">
+        <span class="brand-name">TERRACE JOBS</span>
+        <span class="brand-copy">仕事との出会いを、もっとシンプルに。</span>
+      </a>
     </div>
   </header>
 
@@ -907,9 +952,9 @@ export default async function handler(req: any, res: any) {
   </main>
 
   <footer class="footer">
-    求人AIナビ
+    TERRACE JOBS
     <br>
-    AIで、求人作成をもっと簡単に。
+    仕事との出会いを、もっとシンプルに。
     <br>
     <br>
     <a href="/company">運営会社</a>
