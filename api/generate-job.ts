@@ -141,6 +141,17 @@ export default async function handler(req: any, res: any) {
          AIへの入力情報
       ========================= */
 
+    // 入力された住所を求人票へ必ずそのまま反映するための正規化
+    const exactAddress = [
+      job.prefecture,
+      job.city,
+      job.streetAddress,
+      job.buildingName,
+    ]
+      .filter((value) => typeof value === "string" && value.trim() !== "")
+      .map((value) => value.trim())
+      .join("");
+
     const prompt = `
   あなたは日本の求人広告・採用マーケティングに精通した、
   プロの求人コピーライター兼採用アドバイザーです。
@@ -191,8 +202,16 @@ export default async function handler(req: any, res: any) {
   【勤務地】
   ━━━━━━━━━━━━━━━━━━━━
   
-  勤務地：
-  ${job.location}
+  勤務地（入力された正式住所）：
+  ${exactAddress}
+
+  【勤務地・住所の最重要ルール】
+  ・上記の「勤務地（入力された正式住所）」は求人原稿へ必ずそのまま記載してください。
+  ・都道府県、市区町村、町名・番地、建物名が入力されている場合は、入力された範囲を省略してはいけません。
+  ・「詳細な住所は面接時にお伝えします」「勤務地詳細は面接時にご案内します」「詳しい勤務地はお問い合わせください」など、入力済み住所を隠す表現は禁止です。
+  ・住所を別の住所へ変更、要約、推測、補完してはいけません。
+  ・建物名が未入力の場合は建物名を推測して追加してはいけません。
+  ・location の先頭には必ず上記の正式住所を記載してください。
 
   最寄り駅：
   ${job.nearestStationName || "未指定"}
@@ -332,6 +351,8 @@ export default async function handler(req: any, res: any) {
   ・入力された条件を元に、出来るだけ分かりやすくボリュームのある魅力的な求人を作ること
   ・適切な改行を入れること
   ・入力された条件を勝手に変更しない
+  ・入力された住所は必ず求人票へ表示し、AIの判断で非公開・省略しない
+  ・入力済み住所を「詳細は面接時にお伝えします」等の表現へ置き換えない
   ・入力されていない条件を事実として追加しない
   ・給与を勝手に変更しない
   ・勤務時間を勝手に変更しない
@@ -708,11 +729,11 @@ export default async function handler(req: any, res: any) {
       ? `${job.nearestStationName}駅${job.nearestStationWalkMinutes ? `から徒歩${job.nearestStationWalkMinutes}分` : ""}`
       : "";
 
-    const parsedLocation = parsed?.job?.location || "";
-    const safeLocation =
-      manualAccess && !parsedLocation.includes(String(job.nearestStationName))
-        ? [parsedLocation, manualAccess].filter(Boolean).join("\n")
-        : parsedLocation;
+    // 勤務地はAIの文章を信用せず、入力された正式住所を必ず使用する。
+    // これにより「詳細な住所は面接時にお伝えします」等への置き換えを防ぐ。
+    const safeLocation = [exactAddress, manualAccess]
+      .filter((value) => typeof value === "string" && value.trim() !== "")
+      .join("\n");
 
     const safeJob = {
       title: parsed?.job?.title || "",
