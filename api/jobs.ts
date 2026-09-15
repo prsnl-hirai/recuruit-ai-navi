@@ -2,6 +2,119 @@ import { neon } from "@neondatabase/serverless";
 
 const sql = neon(process.env.DATABASE_URL!);
 
+function textValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+}
+
+function parseList(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(textValue).filter(Boolean);
+
+  const raw = textValue(value);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(textValue).filter(Boolean);
+  } catch {
+    // 通常文字列として扱う
+  }
+
+  return raw
+    .split(/[、,\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getBaseUrl(req: any): string {
+  const configured =
+    process.env.PUBLIC_SITE_URL ||
+    process.env.VITE_PUBLIC_SITE_URL ||
+    process.env.SITE_URL;
+
+  if (configured) return String(configured).replace(/\/+$/, "");
+
+  const proto = textValue(req.headers["x-forwarded-proto"]) || "https";
+  const host = textValue(req.headers.host);
+  return host ? `${proto}://${host}` : "";
+}
+
+function buildPublicJob(job: any, baseUrl: string) {
+  const address = [
+    job.prefecture,
+    job.city,
+    job.street_address,
+    job.building_name,
+  ]
+    .map(textValue)
+    .filter(Boolean)
+    .join("");
+
+  const stationRaw = textValue(job.nearest_station_name).replace(/駅+$/g, "");
+  const walkMinutes = textValue(job.nearest_station_walk_minutes);
+  const access = stationRaw
+    ? walkMinutes
+      ? `${stationRaw}駅から徒歩${walkMinutes}分`
+      : `${stationRaw}駅`
+    : "";
+
+  const salaryDisplay =
+    textValue(job.ai_salary) ||
+    [textValue(job.salary_type), textValue(job.salary)]
+      .filter(Boolean)
+      .join(" ");
+
+  return {
+    id: job.public_id,
+    source: "TERRACE JOBS",
+    title:
+      textValue(job.ai_title) ||
+      textValue(job.title) ||
+      textValue(job.job_title),
+    companyName: textValue(job.company_name),
+    industry: textValue(job.industry),
+    jobTitle: textValue(job.job_title),
+    employmentType:
+      textValue(job.ai_employment_type) || textValue(job.employment_type),
+    recruitmentCount: textValue(job.recruitment_count),
+    catchCopy: textValue(job.catch_copy),
+    description:
+      textValue(job.ai_description) || textValue(job.job_description),
+    requirements: textValue(job.ai_requirements),
+    salary: {
+      type: textValue(job.salary_type),
+      amount: textValue(job.salary),
+      display: salaryDisplay,
+    },
+    workingHours: textValue(job.ai_working_hours),
+    location: {
+      postalCode: textValue(job.postal_code),
+      prefecture: textValue(job.prefecture),
+      city: textValue(job.city),
+      streetAddress: textValue(job.street_address),
+      buildingName: textValue(job.building_name),
+      fullAddress:
+        address || textValue(job.location) || textValue(job.ai_location),
+      nearestStation: stationRaw ? `${stationRaw}駅` : "",
+      walkMinutes,
+      access,
+    },
+    benefits: parseList(job.ai_benefits).length
+      ? parseList(job.ai_benefits)
+      : parseList(job.benefits),
+    appealPoints: parseList(job.ai_appeal_points),
+    url: baseUrl
+      ? `${baseUrl}/jobs/${job.public_id}`
+      : `/jobs/${job.public_id}`,
+    publishedAt: job.created_at,
+    updatedAt: job.updated_at,
+    validThrough: job.valid_through
+      ? String(job.valid_through).slice(0, 10)
+      : null,
+  };
+}
+
 export default async function handler(req: any, res: any) {
   try {
     // ========================================
@@ -289,20 +402,74 @@ export default async function handler(req: any, res: any) {
     }
 
     // ========================================
-    // 求人一覧取得
+    // 求人取得 / 公開求人一覧 / 外部媒体フィード
+    // 1つのFunctionに統合してVercel Hobbyの上限を節約
     // ========================================
     if (req.method === "GET") {
+      const action = textValue(req.query.action);
       const id = req.query.id ? Number(req.query.id) : null;
 
-      // 1件取得
+      // ----------------------------------------
+      // 公開求人一覧: /api/jobs?action=public-list
+      // ----------------------------------------
+      if (action === "public-list") {
+        const jobs = await sql`
+          SELECT *
+          FROM jobs
+          WHERE status = '1'
+            AND public_id IS NOT NULL
+            AND (
+              valid_through IS NULL
+              OR valid_through >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+            )
+          ORDER BY updated_at DESC, created_at DESC
+        `;
+
+        return res.status(200).json({
+          success: true,
+          jobs,
+        });
+      }
+
+      // ----------------------------------------
+      // 共通求人フィード: /api/jobs?action=feed
+      // ----------------------------------------
+      if (action === "feed") {
+        const rows = await sql`
+          SELECT *
+          FROM jobs
+          WHERE status = '1'
+            AND public_id IS NOT NULL
+            AND (
+              valid_through IS NULL
+              OR valid_through >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+            )
+          ORDER BY updated_at DESC, created_at DESC
+        `;
+
+        const baseUrl = getBaseUrl(req);
+        const jobs = rows.map((job: any) => buildPublicJob(job, baseUrl));
+
+        res.setHeader("Cache-Control", "public, max-age=60, s-maxage=300");
+
+        return res.status(200).json({
+          success: true,
+          source: "TERRACE JOBS",
+          generatedAt: new Date().toISOString(),
+          count: jobs.length,
+          jobs,
+        });
+      }
+
+      // 1件取得: /api/jobs?id=123
       if (id) {
         const rows = await sql`
-      SELECT *
-      FROM jobs
-      WHERE id = ${id}
-        AND status <> '9'
-      LIMIT 1
-    `;
+          SELECT *
+          FROM jobs
+          WHERE id = ${id}
+            AND status <> '9'
+          LIMIT 1
+        `;
 
         if (rows.length === 0) {
           return res.status(404).json({
@@ -317,13 +484,13 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      // 一覧取得
+      // 管理画面一覧: /api/jobs
       const jobs = await sql`
-    SELECT *
-    FROM jobs
-    WHERE status <> '9'
-    ORDER BY created_at DESC
-  `;
+        SELECT *
+        FROM jobs
+        WHERE status <> '9'
+        ORDER BY created_at DESC
+      `;
 
       return res.status(200).json({
         success: true,

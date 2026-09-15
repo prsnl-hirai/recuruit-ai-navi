@@ -54,7 +54,7 @@ export default function PublicJobList() {
         setLoading(true);
         setErrorMessage("");
 
-        const response = await fetch("/api/public-job-list");
+        const response = await fetch("/api/jobs?action=public-list");
 
         const data = await response.json();
 
