@@ -1572,6 +1572,9 @@ function App() {
         .intro p { margin: 0 !important; }
 
         .page-nav-button {
+          height: 42px !important;
+          min-height: 42px !important;
+          margin: 0 !important;
           width: 100% !important;
           min-width: 0 !important;
           box-sizing: border-box !important;
@@ -1591,72 +1594,144 @@ function App() {
         }
       `}</style>
 
-      <header
-        className="header"
+      {/* ヘッダー + ページ内メニューを1つの固定領域にまとめる */}
+      <div
         style={{
           position: "sticky",
           top: 0,
           zIndex: 1100,
           background: "#ffffff",
-          borderBottom: "1px solid #e5e7eb",
+          boxShadow: "0 1px 0 #e5e7eb",
         }}
       >
-        <div
+        <header
+          className="header"
           style={{
-            maxWidth: "700px",
-            margin: "0 auto",
-            padding: "0 16px",
-            boxSizing: "border-box",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            minHeight: "64px",
+            position: "static",
+            padding: 0,
+            margin: 0,
+            background: "#ffffff",
+            borderBottom: "1px solid #e5e7eb",
           }}
         >
-          {currentPage === "edit" && editingJobId !== null && (
-            <button
-              type="button"
-              style={{
-                border: "none",
-                background: "transparent",
-                padding: "6px 0",
-                color: "#2563eb",
-                fontSize: "14px",
-                fontWeight: 700,
-                cursor: "pointer",
-                flexShrink: 0,
-                whiteSpace: "nowrap",
-              }}
-              onClick={() => {
-                setEditingJobId(null);
-                setResult(null);
-                setErrorMessage("");
-                setCurrentPage("jobs");
+          <div
+            style={{
+              maxWidth: "700px",
+              margin: "0 auto",
+              padding: "6px 16px",
+              boxSizing: "border-box",
+              minHeight: "58px",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            {currentPage === "edit" && editingJobId !== null && (
+              <button
+                type="button"
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  padding: "6px 0",
+                  color: "#2563eb",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                }}
+                onClick={() => {
+                  setEditingJobId(null);
+                  setResult(null);
+                  setErrorMessage("");
+                  setCurrentPage("jobs");
 
-                // URLも求人一覧に合わせる
-                const url = new URL(window.location.href);
-                url.searchParams.set("page", "jobs");
-                window.history.pushState({}, "", url.toString());
+                  const url = new URL(window.location.href);
+                  url.searchParams.set("page", "jobs");
+                  window.history.pushState({}, "", url.toString());
+                }}
+              >
+                ← 求人一覧に戻る
+              </button>
+            )}
+
+            <div
+              className="header-inner"
+              style={{
+                minWidth: 0,
+                padding: 0,
+                margin: 0,
+                flex: 1,
               }}
             >
-              ← 求人一覧に戻る
-            </button>
-          )}
-          <div className="header-inner">
-            <div className="logo">
-              <div className="logo-icon">🤖</div>
+              <div className="logo">
+                <div className="logo-icon">🤖</div>
 
-              <div>
-                <div className="logo-title">求人AIナビ</div>
-
-                <div className="logo-subtitle">
-                  AIで応募されやすい求人を作成
+                <div>
+                  <div className="logo-title">求人AIナビ</div>
+                  <div className="logo-subtitle">
+                    AIで応募されやすい求人を作成
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+
+        <nav
+          aria-label="ページ内移動"
+          style={{
+            position: "static",
+            background: "rgba(255,255,255,0.98)",
+            borderBottom: "1px solid #e5e7eb",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: "700px",
+              margin: "0 auto",
+              padding: "5px 16px 7px",
+              boxSizing: "border-box",
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: "8px",
+            }}
+          >
+            <button
+              type="button"
+              className="select-button page-nav-button"
+              onClick={() => scrollToSection("input-area")}
+            >
+              📝 情報入力
+            </button>
+
+            <button
+              type="button"
+              className="select-button page-nav-button"
+              disabled={!result}
+              onClick={() => scrollToSection("advice-area")}
+              style={
+                !result ? { opacity: 0.45, cursor: "not-allowed" } : undefined
+              }
+            >
+              💡 アドバイス
+            </button>
+
+            <button
+              type="button"
+              className="select-button page-nav-button"
+              disabled={!result}
+              onClick={() => scrollToSection("job-area")}
+              style={
+                !result ? { opacity: 0.45, cursor: "not-allowed" } : undefined
+              }
+            >
+              👀 求人
+            </button>
+          </div>
+        </nav>
+      </div>
 
       {/* ====================================
           Intro
@@ -1671,63 +1746,6 @@ function App() {
 
         <p>必要な情報を選択・入力するだけ。 AIが求人内容を最適化します。</p>
       </div>
-
-      {/* ====================================
-          ページ内ナビゲーション
-      ==================================== */}
-      <nav
-        aria-label="ページ内移動"
-        style={{
-          position: "sticky",
-          top: "64px",
-          zIndex: 1000,
-          background: "rgba(255,255,255,0.96)",
-          borderBottom: "1px solid #e5e7eb",
-          backdropFilter: "blur(8px)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "700px",
-            margin: "0 auto",
-            padding: "6px 16px",
-            boxSizing: "border-box",
-            display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-            gap: "8px",
-          }}
-        >
-          <button
-            type="button"
-            className="select-button page-nav-button"
-            onClick={() => scrollToSection("input-area")}
-          >
-            📝 情報入力
-          </button>
-          <button
-            type="button"
-            className="select-button page-nav-button"
-            disabled={!result}
-            onClick={() => scrollToSection("advice-area")}
-            style={
-              !result ? { opacity: 0.45, cursor: "not-allowed" } : undefined
-            }
-          >
-            💡 アドバイス
-          </button>
-          <button
-            type="button"
-            className="select-button page-nav-button"
-            disabled={!result}
-            onClick={() => scrollToSection("job-area")}
-            style={
-              !result ? { opacity: 0.45, cursor: "not-allowed" } : undefined
-            }
-          >
-            👀 求人
-          </button>
-        </div>
-      </nav>
 
       {/* ====================================
           Main
@@ -1747,7 +1765,7 @@ function App() {
         <section
           id="input-area"
           className="card"
-          style={{ scrollMarginTop: "130px" }}
+          style={{ scrollMarginTop: "145px" }}
         >
           <div className="section-title">
             <span>📌</span>
@@ -2892,7 +2910,7 @@ function App() {
             <div
               id="advice-area"
               className="result-block"
-              style={{ scrollMarginTop: "130px" }}
+              style={{ scrollMarginTop: "145px" }}
             >
               <h3>💡 AIからの採用アドバイス</h3>
 
@@ -3013,7 +3031,7 @@ function App() {
             <div
               id="job-area"
               className="result-block"
-              style={{ scrollMarginTop: "130px" }}
+              style={{ scrollMarginTop: "145px" }}
             >
               <h3>📝 AIが作成した求人票</h3>
 
