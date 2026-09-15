@@ -1543,11 +1543,34 @@ function App() {
   ======================================== */
   return (
     <>
+      <style>{`
+        .page-nav-button {
+          width: 100% !important;
+          min-width: 0 !important;
+          box-sizing: border-box !important;
+          padding-left: 4px !important;
+          padding-right: 4px !important;
+          white-space: nowrap !important;
+          font-size: 14px !important;
+          overflow: hidden;
+        }
+
+        @media (max-width: 420px) {
+          .page-nav-button {
+            font-size: 13px !important;
+            padding-left: 2px !important;
+            padding-right: 2px !important;
+          }
+        }
+      `}</style>
+
       <header className="header">
         <div
           style={{
             maxWidth: "700px",
             margin: "0 auto",
+            padding: "0 16px",
+            boxSizing: "border-box",
             display: "flex",
             alignItems: "center",
             gap: "12px",
@@ -1564,6 +1587,8 @@ function App() {
                 fontSize: "14px",
                 fontWeight: 700,
                 cursor: "pointer",
+                flexShrink: 0,
+                whiteSpace: "nowrap",
               }}
               onClick={() => {
                 setEditingJobId(null);
@@ -1629,6 +1654,7 @@ function App() {
             maxWidth: "700px",
             margin: "0 auto",
             padding: "10px 16px",
+            boxSizing: "border-box",
             display: "grid",
             gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
             gap: "8px",
@@ -1636,14 +1662,14 @@ function App() {
         >
           <button
             type="button"
-            className="select-button"
+            className="select-button page-nav-button"
             onClick={() => scrollToSection("input-area")}
           >
             📝 情報入力
           </button>
           <button
             type="button"
-            className="select-button"
+            className="select-button page-nav-button"
             disabled={!result}
             onClick={() => scrollToSection("advice-area")}
             style={
@@ -1654,7 +1680,7 @@ function App() {
           </button>
           <button
             type="button"
-            className="select-button"
+            className="select-button page-nav-button"
             disabled={!result}
             onClick={() => scrollToSection("job-area")}
             style={
