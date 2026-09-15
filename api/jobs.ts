@@ -2,119 +2,6 @@ import { neon } from "@neondatabase/serverless";
 
 const sql = neon(process.env.DATABASE_URL!);
 
-function textValue(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  return String(value).trim();
-}
-
-function parseList(value: unknown): string[] {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.map(textValue).filter(Boolean);
-
-  const raw = textValue(value);
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed.map(textValue).filter(Boolean);
-  } catch {
-    // 通常文字列として扱う
-  }
-
-  return raw
-    .split(/[、,\n]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function getBaseUrl(req: any): string {
-  const configured =
-    process.env.PUBLIC_SITE_URL ||
-    process.env.VITE_PUBLIC_SITE_URL ||
-    process.env.SITE_URL;
-
-  if (configured) return String(configured).replace(/\/+$/, "");
-
-  const proto = textValue(req.headers["x-forwarded-proto"]) || "https";
-  const host = textValue(req.headers.host);
-  return host ? `${proto}://${host}` : "";
-}
-
-function buildPublicJob(job: any, baseUrl: string) {
-  const address = [
-    job.prefecture,
-    job.city,
-    job.street_address,
-    job.building_name,
-  ]
-    .map(textValue)
-    .filter(Boolean)
-    .join("");
-
-  const stationRaw = textValue(job.nearest_station_name).replace(/駅+$/g, "");
-  const walkMinutes = textValue(job.nearest_station_walk_minutes);
-  const access = stationRaw
-    ? walkMinutes
-      ? `${stationRaw}駅から徒歩${walkMinutes}分`
-      : `${stationRaw}駅`
-    : "";
-
-  const salaryDisplay =
-    textValue(job.ai_salary) ||
-    [textValue(job.salary_type), textValue(job.salary)]
-      .filter(Boolean)
-      .join(" ");
-
-  return {
-    id: job.public_id,
-    source: "TERRACE JOBS",
-    title:
-      textValue(job.ai_title) ||
-      textValue(job.title) ||
-      textValue(job.job_title),
-    companyName: textValue(job.company_name),
-    industry: textValue(job.industry),
-    jobTitle: textValue(job.job_title),
-    employmentType:
-      textValue(job.ai_employment_type) || textValue(job.employment_type),
-    recruitmentCount: textValue(job.recruitment_count),
-    catchCopy: textValue(job.catch_copy),
-    description:
-      textValue(job.ai_description) || textValue(job.job_description),
-    requirements: textValue(job.ai_requirements),
-    salary: {
-      type: textValue(job.salary_type),
-      amount: textValue(job.salary),
-      display: salaryDisplay,
-    },
-    workingHours: textValue(job.ai_working_hours),
-    location: {
-      postalCode: textValue(job.postal_code),
-      prefecture: textValue(job.prefecture),
-      city: textValue(job.city),
-      streetAddress: textValue(job.street_address),
-      buildingName: textValue(job.building_name),
-      fullAddress:
-        address || textValue(job.location) || textValue(job.ai_location),
-      nearestStation: stationRaw ? `${stationRaw}駅` : "",
-      walkMinutes,
-      access,
-    },
-    benefits: parseList(job.ai_benefits).length
-      ? parseList(job.ai_benefits)
-      : parseList(job.benefits),
-    appealPoints: parseList(job.ai_appeal_points),
-    url: baseUrl
-      ? `${baseUrl}/jobs/${job.public_id}`
-      : `/jobs/${job.public_id}`,
-    publishedAt: job.created_at,
-    updatedAt: job.updated_at,
-    validThrough: job.valid_through
-      ? String(job.valid_through).slice(0, 10)
-      : null,
-  };
-}
-
 export default async function handler(req: any, res: any) {
   try {
     // ========================================
@@ -402,74 +289,143 @@ export default async function handler(req: any, res: any) {
     }
 
     // ========================================
-    // 求人取得 / 公開求人一覧 / 外部媒体フィード
-    // 1つのFunctionに統合してVercel Hobbyの上限を節約
+    // 求人一覧取得
     // ========================================
     if (req.method === "GET") {
-      const action = textValue(req.query.action);
-      const id = req.query.id ? Number(req.query.id) : null;
+      const action = String(req.query.action ?? "").trim();
 
-      // ----------------------------------------
-      // 公開求人一覧: /api/jobs?action=public-list
-      // ----------------------------------------
-      if (action === "public-list") {
-        const jobs = await sql`
-          SELECT *
-          FROM jobs
-          WHERE status = '1'
-            AND public_id IS NOT NULL
-            AND (
-              valid_through IS NULL
-              OR valid_through >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
-            )
-          ORDER BY updated_at DESC, created_at DESC
+      // ========================================
+      // 媒体別掲載設定取得
+      // ========================================
+      if (action === "publication-channels") {
+        const jobId = Number(req.query.jobId);
+
+        if (!jobId) {
+          return res.status(400).json({
+            success: false,
+            message: "求人IDがありません。",
+          });
+        }
+
+        const rows = await sql`
+          SELECT
+            job_id,
+            channel,
+            enabled,
+            status,
+            external_job_id,
+            published_at,
+            last_synced_at,
+            error_message
+          FROM job_publication_channels
+          WHERE job_id = ${jobId}
+          ORDER BY channel
         `;
 
         return res.status(200).json({
           success: true,
-          jobs,
+          channels: rows,
         });
       }
 
-      // ----------------------------------------
-      // 共通求人フィード: /api/jobs?action=feed
-      // ----------------------------------------
-      if (action === "feed") {
+      // ========================================
+      // スタンバイ連携準備用フィード
+      // 正式仕様受領後にフォーマットを合わせる
+      // ========================================
+      if (action === "stanby-feed") {
         const rows = await sql`
-          SELECT *
-          FROM jobs
-          WHERE status = '1'
-            AND public_id IS NOT NULL
+          SELECT j.*
+          FROM jobs j
+          INNER JOIN job_publication_channels c
+            ON c.job_id = j.id
+           AND c.channel = 'stanby'
+           AND c.enabled = true
+          WHERE j.status = '1'
+            AND j.public_id IS NOT NULL
             AND (
-              valid_through IS NULL
-              OR valid_through >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
+              j.valid_through IS NULL
+              OR j.valid_through >=
+                (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Tokyo')::date
             )
-          ORDER BY updated_at DESC, created_at DESC
+          ORDER BY j.updated_at DESC
         `;
 
-        const baseUrl = getBaseUrl(req);
-        const jobs = rows.map((job: any) => buildPublicJob(job, baseUrl));
+        const baseUrl = (
+          process.env.PUBLIC_SITE_URL ||
+          process.env.VITE_PUBLIC_SITE_URL ||
+          process.env.SITE_URL ||
+          ""
+        ).replace(/\/+$/, "");
+
+        const feed = rows.map((job: any) => {
+          const fullAddress = [
+            job.prefecture,
+            job.city,
+            job.street_address,
+            job.building_name,
+          ]
+            .filter(Boolean)
+            .join("");
+
+          const station = job.nearest_station_name
+            ? String(job.nearest_station_name).replace(/駅+$/g, "")
+            : "";
+
+          const access = station
+            ? `${station}駅${
+                job.nearest_station_walk_minutes
+                  ? `から徒歩${job.nearest_station_walk_minutes}分`
+                  : ""
+              }`
+            : "";
+
+          return {
+            id: job.public_id,
+            source: "TERRACE JOBS",
+            title: job.ai_title || job.title || job.job_title || "",
+            companyName: job.company_name || "",
+            employmentType: job.ai_employment_type || job.employment_type || "",
+            salary: job.ai_salary || job.salary || "",
+            location: fullAddress || job.location || job.ai_location || "",
+            access,
+            description: job.ai_description || job.job_description || "",
+            requirements: job.ai_requirements || "",
+            benefits: job.ai_benefits || job.benefits || "",
+            catchCopy: job.catch_copy || "",
+            url: baseUrl
+              ? `${baseUrl}/jobs/${job.public_id}`
+              : `/jobs/${job.public_id}`,
+            validThrough: job.valid_through
+              ? String(job.valid_through).slice(0, 10)
+              : null,
+            updatedAt: job.updated_at,
+          };
+        });
 
         res.setHeader("Cache-Control", "public, max-age=60, s-maxage=300");
 
         return res.status(200).json({
           success: true,
           source: "TERRACE JOBS",
+          channel: "stanby",
+          status: "preparing",
           generatedAt: new Date().toISOString(),
-          count: jobs.length,
-          jobs,
+          count: feed.length,
+          jobs: feed,
         });
       }
 
-      // 1件取得: /api/jobs?id=123
+      const id = req.query.id ? Number(req.query.id) : null;
+
+      // 1件取得
       if (id) {
         const rows = await sql`
-          SELECT *
-          FROM jobs
-          WHERE id = ${id}
-            AND status <> '9'
-          LIMIT 1
-        `;
+      SELECT *
+      FROM jobs
+      WHERE id = ${id}
+        AND status <> '9'
+      LIMIT 1
+    `;
 
         if (rows.length === 0) {
           return res.status(404).json({
@@ -484,13 +440,13 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      // 管理画面一覧: /api/jobs
+      // 一覧取得
       const jobs = await sql`
-        SELECT *
-        FROM jobs
-        WHERE status <> '9'
-        ORDER BY created_at DESC
-      `;
+    SELECT *
+    FROM jobs
+    WHERE status <> '9'
+    ORDER BY created_at DESC
+  `;
 
       return res.status(200).json({
         success: true,
@@ -582,6 +538,99 @@ export default async function handler(req: any, res: any) {
           aiAppealPoints,
           validThrough,
         } = req.body ?? {};
+
+        // ========================================
+        // 掲載先設定保存
+        // ========================================
+        if (action === "publication-channels") {
+          const { jobId, channels } = req.body ?? {};
+
+          if (!jobId || !Array.isArray(channels)) {
+            return res.status(400).json({
+              success: false,
+              message: "掲載先設定が不正です。",
+            });
+          }
+
+          const allowedChannels = ["terrace_jobs", "stanby"];
+
+          for (const item of channels) {
+            const channel = String(item?.channel ?? "");
+            const enabled = Boolean(item?.enabled);
+
+            if (!allowedChannels.includes(channel)) {
+              continue;
+            }
+
+            const defaultStatus =
+              channel === "terrace_jobs"
+                ? enabled
+                  ? "published"
+                  : "paused"
+                : enabled
+                  ? "pending"
+                  : "paused";
+
+            await sql`
+              INSERT INTO job_publication_channels (
+                job_id,
+                channel,
+                enabled,
+                status,
+                updated_at
+              )
+              VALUES (
+                ${jobId},
+                ${channel},
+                ${enabled},
+                ${defaultStatus},
+                CURRENT_TIMESTAMP
+              )
+              ON CONFLICT (job_id, channel)
+              DO UPDATE SET
+                enabled = EXCLUDED.enabled,
+                status = CASE
+                  WHEN job_publication_channels.channel = 'terrace_jobs'
+                    THEN CASE
+                      WHEN EXCLUDED.enabled THEN 'published'
+                      ELSE 'paused'
+                    END
+                  ELSE CASE
+                    WHEN EXCLUDED.enabled
+                      AND job_publication_channels.status IN (
+                        'not_connected',
+                        'paused',
+                        'error'
+                      )
+                      THEN 'pending'
+                    WHEN NOT EXCLUDED.enabled
+                      THEN 'paused'
+                    ELSE job_publication_channels.status
+                  END,
+                updated_at = CURRENT_TIMESTAMP
+            `;
+          }
+
+          const savedRows = await sql`
+            SELECT
+              job_id,
+              channel,
+              enabled,
+              status,
+              external_job_id,
+              published_at,
+              last_synced_at,
+              error_message
+            FROM job_publication_channels
+            WHERE job_id = ${jobId}
+            ORDER BY channel
+          `;
+
+          return res.status(200).json({
+            success: true,
+            channels: savedRows,
+          });
+        }
 
         // ========================================
         // IDチェック

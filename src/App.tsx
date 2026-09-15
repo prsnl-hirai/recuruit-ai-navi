@@ -14,6 +14,13 @@ import SubsidyConsultationManagement from "./SubsidyConsultationManagement";
 type WorkType = "固定時間" | "シフト制";
 type SalaryType = "時給" | "日給" | "月給" | "年俸";
 
+type PublicationChannel = "terrace_jobs" | "stanby";
+
+type PublicationChannelState = {
+  terrace_jobs: boolean;
+  stanby: boolean;
+};
+
 type JobForm = {
   // 基本情報
   storeName: string;
@@ -580,6 +587,15 @@ function App() {
   /* エラー */
   const [errorMessage, setErrorMessage] = useState("");
 
+  /* 掲載先 */
+  const [publicationChannels, setPublicationChannels] =
+    useState<PublicationChannelState>({
+      terrace_jobs: true,
+      stanby: false,
+    });
+  const [savingPublicationChannels, setSavingPublicationChannels] =
+    useState(false);
+
   /* ========================================
      URLチェック
   ======================================== */
@@ -1030,6 +1046,40 @@ function App() {
     }
   };
 
+  const savePublicationChannels = async (jobId: number) => {
+    try {
+      setSavingPublicationChannels(true);
+
+      const response = await fetch("/api/jobs?action=publication-channels", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jobId,
+          channels: [
+            {
+              channel: "terrace_jobs",
+              enabled: publicationChannels.terrace_jobs,
+            },
+            {
+              channel: "stanby",
+              enabled: publicationChannels.stanby,
+            },
+          ],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "掲載先設定の保存に失敗しました。");
+      }
+    } finally {
+      setSavingPublicationChannels(false);
+    }
+  };
+
   /* ========================================
     求人保存
   ======================================== */
@@ -1212,7 +1262,10 @@ function App() {
       console.log("求人保存成功:", data.job);
 
       if (data.job?.id) {
-        setSavedJobId(Number(data.job.id));
+        const savedId = Number(data.job.id);
+        setSavedJobId(savedId);
+
+        await savePublicationChannels(savedId);
 
         if (status === "0") {
           alert("求人を保存しました。");
@@ -1415,6 +1468,31 @@ function App() {
 
         setSavedJobId(Number(job.id));
         setPublishedPublicId(job.public_id ?? "");
+
+        try {
+          const channelResponse = await fetch(
+            `/api/jobs?action=publication-channels&jobId=${job.id}`,
+          );
+          const channelData = await channelResponse.json();
+
+          if (channelResponse.ok && channelData.success) {
+            const rows = Array.isArray(channelData.channels)
+              ? channelData.channels
+              : [];
+
+            const terrace = rows.find(
+              (item: any) => item.channel === "terrace_jobs",
+            );
+            const stanby = rows.find((item: any) => item.channel === "stanby");
+
+            setPublicationChannels({
+              terrace_jobs: terrace ? Boolean(terrace.enabled) : true,
+              stanby: stanby ? Boolean(stanby.enabled) : false,
+            });
+          }
+        } catch (channelError) {
+          console.error("掲載先設定取得エラー:", channelError);
+        }
       } catch (error) {
         console.error("編集求人取得エラー:", error);
 
@@ -1502,6 +1580,10 @@ function App() {
           setJobDescriptionOther("");
           setResult(null);
           setErrorMessage("");
+          setPublicationChannels({
+            terrace_jobs: true,
+            stanby: false,
+          });
           setCurrentPage("create");
         }}
         onEditJob={(jobId) => {
@@ -2898,6 +2980,106 @@ function App() {
 
             <p className="help-text">本日以降の日付を指定してください。</p>
             <p className="help-text">指定した日まで求人を掲載します。</p>
+          </div>
+
+          <div className="form-group">
+            <label>掲載先</label>
+            <p className="section-description" style={{ marginTop: 0 }}>
+              公開する求人媒体を選択してください。
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gap: "10px",
+              }}
+            >
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  padding: "14px 16px",
+                  border: "1px solid #dbe3ef",
+                  borderRadius: "12px",
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 800 }}>TERRACE JOBS</div>
+                  <div
+                    style={{
+                      marginTop: "3px",
+                      color: "#64748b",
+                      fontSize: "13px",
+                    }}
+                  >
+                    TERRACE JOBSの公開求人として掲載
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={publicationChannels.terrace_jobs}
+                  onChange={(e) =>
+                    setPublicationChannels((prev) => ({
+                      ...prev,
+                      terrace_jobs: e.target.checked,
+                    }))
+                  }
+                  style={{ width: "20px", height: "20px" }}
+                />
+              </label>
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                  padding: "14px 16px",
+                  border: "1px solid #dbe3ef",
+                  borderRadius: "12px",
+                  background: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 800 }}>スタンバイ</div>
+                  <div
+                    style={{
+                      marginTop: "3px",
+                      color: "#64748b",
+                      fontSize: "13px",
+                    }}
+                  >
+                    連携契約後、ONの求人だけスタンバイ用フィードへ出力
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={publicationChannels.stanby}
+                  onChange={(e) =>
+                    setPublicationChannels((prev) => ({
+                      ...prev,
+                      stanby: e.target.checked,
+                    }))
+                  }
+                  style={{ width: "20px", height: "20px" }}
+                />
+              </label>
+            </div>
+
+            {publicationChannels.stanby && (
+              <p className="help-text" style={{ marginTop: "10px" }}>
+                ※スタンバイ側との正式な連携開始までは「連携準備中」です。
+              </p>
+            )}
+
+            {savingPublicationChannels && (
+              <p className="help-text">掲載先設定を保存しています...</p>
+            )}
           </div>
         </section>
 
