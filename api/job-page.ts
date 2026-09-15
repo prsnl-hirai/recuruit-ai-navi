@@ -15,10 +15,87 @@ function escapeHtml(value: unknown): string {
 }
 
 /**
+ * AI返却値やDB保存値を文字列配列へ正規化
+ * - 配列
+ * - JSON文字列 (例: ["交通費支給","制服貸与"])
+ * - 改行区切り文字列
+ * - 通常文字列
+ * に対応
+ */
+function toStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item ?? "").trim())
+      .filter((item) => item !== "");
+  }
+
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  const raw = String(value).trim();
+
+  if (!raw) {
+    return [];
+  }
+
+  if (raw.startsWith("[") && raw.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(raw);
+
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => String(item ?? "").trim())
+          .filter((item) => item !== "");
+      }
+    } catch {
+      // JSONでなければ通常文字列として扱う
+    }
+  }
+
+  if (/\r?\n/.test(raw)) {
+    return raw
+      .split(/\r?\n/)
+      .map((item) => item.replace(/^[・●■\-\s]+/, "").trim())
+      .filter((item) => item !== "");
+  }
+
+  return [raw];
+}
+
+/**
+ * AI返却値やDB保存値を表示用テキストへ変換
+ */
+function toDisplayText(value: unknown): string {
+  return toStringArray(value).join("\n");
+}
+
+/**
  * 改行を <br> に変換
  */
 function nl2br(value: unknown): string {
-  return escapeHtml(value).replace(/\r?\n/g, "<br>");
+  return escapeHtml(toDisplayText(value)).replace(/\r?\n/g, "<br>");
+}
+
+/**
+ * 配列データを求人ページ用の箇条書きHTMLへ変換
+ */
+function renderList(value: unknown): string {
+  const items = toStringArray(value);
+
+  if (items.length === 0) {
+    return "";
+  }
+
+  if (items.length === 1) {
+    return `<div class="section-content">${nl2br(items[0])}</div>`;
+  }
+
+  return `
+    <ul class="content-list">
+      ${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("\n")}
+    </ul>
+  `;
 }
 
 /**
@@ -247,11 +324,15 @@ export default async function handler(req: any, res: any) {
 
     const employmentType = job.ai_employment_type || job.employment_type || "";
 
-    const benefits = job.ai_benefits || job.benefits || "";
+    // generate-job.ts の新しい返却形式では benefits / appealPoints は配列。
+    // 既存DBに文字列で保存されている求人も表示できるよう両対応にする。
+    const benefits = job.ai_benefits ?? job.benefits ?? [];
+    const benefitsList = toStringArray(benefits);
 
-    const appealPoints = job.ai_appeal_points || "";
+    const appealPoints = job.ai_appeal_points ?? [];
+    const appealPointsList = toStringArray(appealPoints);
 
-    const catchCopy = job.catch_copy || "";
+    const catchCopy = job.ai_catch_copy || job.catch_copy || "";
 
     const companyName = job.company_name || "";
 
@@ -284,6 +365,14 @@ export default async function handler(req: any, res: any) {
      * Google 求人検索
      * JobPosting 構造化データ
      */
+    const structuredDescription = [
+      description,
+      appealPointsList.join("\n"),
+      requirements,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
     const jsonLd: Record<string, unknown> = {
       "@context": "https://schema.org/",
 
@@ -291,7 +380,7 @@ export default async function handler(req: any, res: any) {
 
       title: jobTitle,
 
-      description,
+      description: structuredDescription || description,
 
       datePosted,
 
@@ -529,6 +618,17 @@ export default async function handler(req: any, res: any) {
       font-size: 15px;
     }
 
+    .content-list {
+      margin: 0;
+      padding-left: 1.25em;
+      color: #374151;
+      font-size: 15px;
+    }
+
+    .content-list li + li {
+      margin-top: 7px;
+    }
+
     .footer {
       padding: 30px 16px;
       color: #777;
@@ -750,32 +850,28 @@ export default async function handler(req: any, res: any) {
         }
 
         ${
-          benefits
+          benefitsList.length > 0
             ? `
               <section class="section">
                 <h2>
                   待遇・福利厚生
                 </h2>
 
-                <div class="section-content">
-                  ${nl2br(benefits)}
-                </div>
+                ${renderList(benefitsList)}
               </section>
             `
             : ""
         }
 
         ${
-          appealPoints
+          appealPointsList.length > 0
             ? `
               <section class="section">
                 <h2>
                   この求人の魅力
                 </h2>
 
-                <div class="section-content">
-                  ${nl2br(appealPoints)}
-                </div>
+                ${renderList(appealPointsList)}
               </section>
             `
             : ""
