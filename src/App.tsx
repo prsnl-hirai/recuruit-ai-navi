@@ -25,6 +25,8 @@ type JobForm = {
   city: string;
   streetAddress: string;
   buildingName: string;
+  nearestStationName: string;
+  nearestStationWalkMinutes: string;
 
   // 仕事内容
   jobDescription: string;
@@ -66,8 +68,12 @@ type JobForm = {
   ageGroup: string[];
   genderRatio: string;
 
+  // 採用ターゲット
+  targetAudience: string[];
+
   // アピールポイント
   appealPoints: string[];
+  appealPriorities: string[];
 
   // AIへのリクエスト
   aiRequest: string;
@@ -381,6 +387,22 @@ const genderRatioOptions = [
   "男女ともに活躍",
 ];
 
+const targetAudienceOptions = [
+  "高校生",
+  "大学生",
+  "学生",
+  "フリーター",
+  "主婦・主夫",
+  "子育て中",
+  "Wワーク・副業",
+  "未経験者",
+  "経験者",
+  "第二新卒・若手",
+  "ミドル層",
+  "シニア層",
+  "外国人材",
+];
+
 const appealPointOptions = [
   "未経験から始めやすい",
   "研修が充実",
@@ -424,6 +446,8 @@ const initialForm: JobForm = {
   city: "",
   streetAddress: "",
   buildingName: "",
+  nearestStationName: "",
+  nearestStationWalkMinutes: "",
 
   jobDescription: "",
 
@@ -459,7 +483,10 @@ const initialForm: JobForm = {
   ageGroup: [],
   genderRatio: "",
 
+  targetAudience: [],
+
   appealPoints: [],
+  appealPriorities: [],
 
   aiRequest: "",
 
@@ -779,7 +806,9 @@ function App() {
       | "allowances"
       | "workplaceAtmosphere"
       | "ageGroup"
-      | "appealPoints",
+      | "targetAudience"
+      | "appealPoints"
+      | "appealPriorities",
     value: string,
   ) => {
     setForm((prev) => {
@@ -1039,6 +1068,8 @@ function App() {
         city: form.city,
         streetAddress: form.streetAddress,
         buildingName: form.buildingName,
+        nearestStationName: form.nearestStationName,
+        nearestStationWalkMinutes: form.nearestStationWalkMinutes,
         location: [
           form.prefecture,
           form.city,
@@ -1087,7 +1118,9 @@ function App() {
         ageGroup: form.ageGroup,
         genderRatio: form.genderRatio,
 
+        targetAudience: form.targetAudience,
         appealPoints: form.appealPoints,
+        appealPriorities: form.appealPriorities,
 
         aiRequest: form.aiRequest,
 
@@ -1228,6 +1261,11 @@ function App() {
           city: job.city ?? "",
           streetAddress: job.street_address ?? "",
           buildingName: job.building_name ?? "",
+          nearestStationName: job.nearest_station_name ?? "",
+          nearestStationWalkMinutes:
+            job.nearest_station_walk_minutes != null
+              ? String(job.nearest_station_walk_minutes)
+              : "",
 
           jobDescription: job.job_description ?? "",
 
@@ -1263,7 +1301,9 @@ function App() {
           ageGroup: toArray(job.age_group),
           genderRatio: job.gender_ratio ?? "",
 
+          targetAudience: toArray(job.target_audience),
           appealPoints: toArray(job.appeal_points),
+          appealPriorities: toArray(job.appeal_priorities ?? job.appeal_points),
           aiRequest: job.ai_request ?? "",
 
           validThrough: job.valid_through
@@ -1853,6 +1893,44 @@ function App() {
               }}
             />
           </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>最寄り駅</label>
+              <input
+                type="text"
+                placeholder="例：伏見駅"
+                value={form.nearestStationName}
+                onChange={(e) =>
+                  setSingleValue("nearestStationName", e.target.value)
+                }
+              />
+            </div>
+
+            <div className="form-group">
+              <label>駅から徒歩</label>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder="例：5"
+                  value={form.nearestStationWalkMinutes}
+                  onChange={(e) =>
+                    setSingleValue("nearestStationWalkMinutes", e.target.value)
+                  }
+                />
+                <span style={{ whiteSpace: "nowrap" }}>分</span>
+              </div>
+            </div>
+          </div>
+
+          <p className="help-text">
+            求人原稿では「○○駅から徒歩○分」のようにアクセス情報として使用します。
+          </p>
 
           {/* 勤務形態 */}
           <div className="form-group">
@@ -2456,6 +2534,44 @@ function App() {
         </section>
 
         {/* ==================================
+            採用ターゲット
+        ================================== */}
+
+        <section className="card">
+          <div className="section-title">
+            <span>🎯</span>
+            <h2>採用したいターゲット</h2>
+          </div>
+
+          <p className="section-description">
+            応募してほしい人を選択してください。複数選択できます。
+            AIがターゲットごとに重視されやすい条件や不安を考慮して文章を作成します。
+          </p>
+
+          <div className="benefit-grid">
+            {targetAudienceOptions.map((option) => {
+              const selected = form.targetAudience.includes(option);
+
+              return (
+                <button
+                  type="button"
+                  key={option}
+                  className={`benefit-button ${selected ? "active" : ""}`}
+                  onClick={() => toggleArrayValue("targetAudience", option)}
+                >
+                  <span className="benefit-check">{selected ? "✓" : ""}</span>
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="help-text">
+            ※ターゲットに合わせて訴求内容は変えますが、応募資格を勝手に限定しません。
+          </p>
+        </section>
+
+        {/* ==================================
             アピールポイント
         ================================== */}
 
@@ -2479,7 +2595,10 @@ function App() {
                   type="button"
                   key={option}
                   className={`benefit-button ${selected ? "active" : ""}`}
-                  onClick={() => toggleArrayValue("appealPoints", option)}
+                  onClick={() => {
+                    toggleArrayValue("appealPoints", option);
+                    toggleArrayValue("appealPriorities", option);
+                  }}
                 >
                   <span className="benefit-check">{selected ? "✓" : ""}</span>
 

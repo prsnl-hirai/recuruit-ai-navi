@@ -26,6 +26,8 @@ export default async function handler(req: any, res: any) {
         streetAddress,
         buildingName,
         location,
+        nearestStationName,
+        nearestStationWalkMinutes,
 
         workType,
         startTime,
@@ -60,6 +62,8 @@ export default async function handler(req: any, res: any) {
         genderRatio,
 
         appealPoints,
+        targetAudience,
+        appealPriorities,
 
         aiRequest,
 
@@ -136,6 +140,8 @@ export default async function handler(req: any, res: any) {
           street_address,
           building_name,
           location,
+          nearest_station_name,
+          nearest_station_walk_minutes,
 
           work_type,
           start_time,
@@ -170,6 +176,8 @@ export default async function handler(req: any, res: any) {
           gender_ratio,
 
           appeal_points,
+          target_audience,
+          appeal_priorities,
 
           ai_request,
 
@@ -209,6 +217,8 @@ export default async function handler(req: any, res: any) {
           ${streetAddress || null},
           ${buildingName || null},
           ${location || null},
+          ${nearestStationName || null},
+          ${nearestStationWalkMinutes || null},
 
           ${workType || null},
           ${startTime || null},
@@ -243,6 +253,8 @@ export default async function handler(req: any, res: any) {
           ${genderRatio || null},
 
           ${JSON.stringify(appealPoints || [])},
+          ${JSON.stringify(targetAudience || [])},
+          ${JSON.stringify(appealPriorities || [])},
 
           ${aiRequest || null},
 
@@ -341,6 +353,8 @@ export default async function handler(req: any, res: any) {
           streetAddress,
           buildingName,
           location,
+          nearestStationName,
+          nearestStationWalkMinutes,
 
           workType,
           startTime,
@@ -375,6 +389,8 @@ export default async function handler(req: any, res: any) {
           genderRatio,
 
           appealPoints,
+          targetAudience,
+          appealPriorities,
 
           aiRequest,
 
@@ -539,6 +555,8 @@ export default async function handler(req: any, res: any) {
         street_address = ${streetAddress || null},
         building_name = ${buildingName || null},
         location = ${location || null},
+        nearest_station_name = ${nearestStationName || null},
+        nearest_station_walk_minutes = ${nearestStationWalkMinutes || null},
 
         work_type = ${workType || null},
         start_time = ${startTime || null},
@@ -584,6 +602,8 @@ export default async function handler(req: any, res: any) {
         gender_ratio = ${genderRatio || null},
 
         appeal_points = ${JSON.stringify(appealPoints || [])},
+        target_audience = ${JSON.stringify(targetAudience || [])},
+        appeal_priorities = ${JSON.stringify(appealPriorities || [])},
 
         ai_request = ${aiRequest || null},
 
