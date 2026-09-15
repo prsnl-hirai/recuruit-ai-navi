@@ -1544,6 +1544,33 @@ function App() {
   return (
     <>
       <style>{`
+                .header {
+          padding-top: 6px !important;
+          padding-bottom: 6px !important;
+        }
+        .header-inner {
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        .logo-icon {
+          width: 40px !important;
+          height: 40px !important;
+          font-size: 22px !important;
+        }
+        .logo-title { font-size: 18px !important; }
+        .logo-subtitle { font-size: 11px !important; }
+        .intro {
+          padding-top: 18px !important;
+          padding-bottom: 18px !important;
+        }
+        .intro h1 {
+          margin-top: 0 !important;
+          margin-bottom: 8px !important;
+          font-size: 27px !important;
+          line-height: 1.35 !important;
+        }
+        .intro p { margin: 0 !important; }
+
         .page-nav-button {
           width: 100% !important;
           min-width: 0 !important;
@@ -1641,9 +1668,11 @@ function App() {
       <nav
         aria-label="ページ内移動"
         style={{
-          position: "sticky",
+          position: "fixed",
           top: 0,
-          zIndex: 30,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
           background: "rgba(255,255,255,0.96)",
           borderBottom: "1px solid #e5e7eb",
           backdropFilter: "blur(8px)",
@@ -1653,7 +1682,7 @@ function App() {
           style={{
             maxWidth: "700px",
             margin: "0 auto",
-            padding: "10px 16px",
+            padding: "6px 16px",
             boxSizing: "border-box",
             display: "grid",
             gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
@@ -1691,6 +1720,7 @@ function App() {
           </button>
         </div>
       </nav>
+      <div aria-hidden="true" style={{ height: "58px" }} />
 
       {/* ====================================
           Main
