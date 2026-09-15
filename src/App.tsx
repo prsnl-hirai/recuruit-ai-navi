@@ -1591,7 +1591,16 @@ function App() {
         }
       `}</style>
 
-      <header className="header">
+      <header
+        className="header"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 1100,
+          background: "#ffffff",
+          borderBottom: "1px solid #e5e7eb",
+        }}
+      >
         <div
           style={{
             maxWidth: "700px",
@@ -1601,6 +1610,7 @@ function App() {
             display: "flex",
             alignItems: "center",
             gap: "12px",
+            minHeight: "64px",
           }}
         >
           {currentPage === "edit" && editingJobId !== null && (
@@ -1668,10 +1678,8 @@ function App() {
       <nav
         aria-label="ページ内移動"
         style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
+          position: "sticky",
+          top: "64px",
           zIndex: 1000,
           background: "rgba(255,255,255,0.96)",
           borderBottom: "1px solid #e5e7eb",
@@ -1720,7 +1728,6 @@ function App() {
           </button>
         </div>
       </nav>
-      <div aria-hidden="true" style={{ height: "58px" }} />
 
       {/* ====================================
           Main
@@ -1740,7 +1747,7 @@ function App() {
         <section
           id="input-area"
           className="card"
-          style={{ scrollMarginTop: "90px" }}
+          style={{ scrollMarginTop: "130px" }}
         >
           <div className="section-title">
             <span>📌</span>
@@ -2885,7 +2892,7 @@ function App() {
             <div
               id="advice-area"
               className="result-block"
-              style={{ scrollMarginTop: "90px" }}
+              style={{ scrollMarginTop: "130px" }}
             >
               <h3>💡 AIからの採用アドバイス</h3>
 
@@ -3006,7 +3013,7 @@ function App() {
             <div
               id="job-area"
               className="result-block"
-              style={{ scrollMarginTop: "90px" }}
+              style={{ scrollMarginTop: "130px" }}
             >
               <h3>📝 AIが作成した求人票</h3>
 
@@ -3182,7 +3189,7 @@ function App() {
                           fontWeight: 600,
                         }}
                       >
-                        {result.job.salary.split("\n")[0]}
+                        {`${form.salaryType}${Number(form.salary || 0).toLocaleString("ja-JP")}円`}
                       </span>
                     )}
                     {result.job.location && (
