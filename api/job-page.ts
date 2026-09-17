@@ -731,10 +731,10 @@ export default async function handler(req: any, res: any) {
 
   <header class="header">
     <div class="header-inner">
-      <a class="brand" href="/" aria-label="求人AIナビへ">
-        <span class="brand-name">求人AIナビ</span>
-        <span class="brand-copy">AIで、求人作成をもっと簡単に。</span>
-      </a>
+      <div class="brand">
+        <span class="brand-name">TERRACE JOBS</span>
+        <span class="brand-copy">仕事との出会いを、もっとシンプルに。</span>
+      </div>
     </div>
   </header>
 
@@ -954,9 +954,9 @@ export default async function handler(req: any, res: any) {
   </main>
 
   <footer class="footer">
-    求人AIナビ
+    <strong>TERRACE JOBS</strong>
     <br>
-    AIで、求人作成をもっと簡単に。
+    本求人ページは求人AIナビを利用して掲載されています。
     <br>
     <br>
     <a href="/company">運営会社</a>
