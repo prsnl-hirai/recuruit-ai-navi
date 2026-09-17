@@ -255,7 +255,7 @@ export default async function handler(req: any, res: any) {
               name="viewport"
               content="width=device-width, initial-scale=1.0"
             >
-            <title>求人が見つかりません｜TERRACE JOBS</title>
+            <title>求人が見つかりません｜求人AIナビ</title>
           </head>
 
           <body
@@ -322,7 +322,9 @@ export default async function handler(req: any, res: any) {
 
     const location = fullLocation || job.ai_location || job.location || "";
 
-    const nearestStationName = String(job.nearest_station_name || "").trim();
+    const nearestStationName = String(job.nearest_station_name || "")
+      .trim()
+      .replace(/駅+$/g, "");
     const nearestStationWalkMinutes = String(
       job.nearest_station_walk_minutes ?? "",
     ).trim();
@@ -485,7 +487,7 @@ export default async function handler(req: any, res: any) {
     content="${escapeHtml(description.replace(/\r?\n/g, " ").slice(0, 150))}"
   >
 
-  <meta property="og:site_name" content="TERRACE JOBS">
+  <meta property="og:site_name" content="求人AIナビ">
   <meta property="og:type" content="website">
   <meta property="og:title" content="${escapeHtml(jobTitle)}｜${escapeHtml(companyName)}">
   <meta property="og:description" content="${escapeHtml(description.replace(/\r?\n/g, " ").slice(0, 150))}">
@@ -729,9 +731,9 @@ export default async function handler(req: any, res: any) {
 
   <header class="header">
     <div class="header-inner">
-      <a class="brand" href="/jobs" aria-label="TERRACE JOBS 求人一覧へ">
-        <span class="brand-name">TERRACE JOBS</span>
-        <span class="brand-copy">仕事との出会いを、もっとシンプルに。</span>
+      <a class="brand" href="/" aria-label="求人AIナビへ">
+        <span class="brand-name">求人AIナビ</span>
+        <span class="brand-copy">AIで、求人作成をもっと簡単に。</span>
       </a>
     </div>
   </header>
@@ -952,9 +954,9 @@ export default async function handler(req: any, res: any) {
   </main>
 
   <footer class="footer">
-    TERRACE JOBS
+    求人AIナビ
     <br>
-    仕事との出会いを、もっとシンプルに。
+    AIで、求人作成をもっと簡単に。
     <br>
     <br>
     <a href="/company">運営会社</a>

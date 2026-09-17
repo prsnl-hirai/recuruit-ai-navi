@@ -393,6 +393,7 @@ export default async function handler(req: any, res: any) {
                 )
                 FROM job_publication_channels c
                 WHERE c.job_id = j.id
+                  AND c.channel = 'stanby'
               ),
               '[]'::json
             ) AS publication_channels
@@ -434,6 +435,7 @@ export default async function handler(req: any, res: any) {
             error_message
           FROM job_publication_channels
           WHERE job_id = ${jobId}
+            AND channel = 'stanby'
           ORDER BY channel
         `;
 
@@ -496,7 +498,7 @@ export default async function handler(req: any, res: any) {
 
           return {
             id: job.public_id,
-            source: "TERRACE JOBS",
+            source: "求人AIナビ",
             title: job.ai_title || job.title || job.job_title || "",
             companyName: job.company_name || "",
             employmentType: job.ai_employment_type || job.employment_type || "",
@@ -521,7 +523,7 @@ export default async function handler(req: any, res: any) {
 
         return res.status(200).json({
           success: true,
-          source: "TERRACE JOBS",
+          source: "求人AIナビ",
           channel: "stanby",
           status: "preparing",
           generatedAt: new Date().toISOString(),
@@ -667,7 +669,7 @@ export default async function handler(req: any, res: any) {
             });
           }
 
-          const allowedChannels = ["terrace_jobs", "stanby"];
+          const allowedChannels = ["stanby"];
 
           for (const item of channels) {
             const channel = String(item?.channel ?? "");
@@ -677,14 +679,7 @@ export default async function handler(req: any, res: any) {
               continue;
             }
 
-            const defaultStatus =
-              channel === "terrace_jobs"
-                ? enabled
-                  ? "published"
-                  : "paused"
-                : enabled
-                  ? "pending"
-                  : "paused";
+            const defaultStatus = enabled ? "pending" : "paused";
 
             await sql`
               INSERT INTO job_publication_channels (
@@ -705,23 +700,17 @@ export default async function handler(req: any, res: any) {
               DO UPDATE SET
                 enabled = EXCLUDED.enabled,
                 status = CASE
-                  WHEN job_publication_channels.channel = 'terrace_jobs'
-                    THEN CASE
-                      WHEN EXCLUDED.enabled THEN 'published'
-                      ELSE 'paused'
-                    END
-                  ELSE CASE
-                    WHEN EXCLUDED.enabled
-                      AND job_publication_channels.status IN (
-                        'not_connected',
-                        'paused',
-                        'error'
-                      )
-                      THEN 'pending'
-                    WHEN NOT EXCLUDED.enabled
-                      THEN 'paused'
-                    ELSE job_publication_channels.status
-                  END,
+                  WHEN EXCLUDED.enabled
+                    AND job_publication_channels.status IN (
+                      'not_connected',
+                      'paused',
+                      'error'
+                    )
+                    THEN 'pending'
+                  WHEN NOT EXCLUDED.enabled
+                    THEN 'paused'
+                  ELSE job_publication_channels.status
+                END,
                 updated_at = CURRENT_TIMESTAMP
             `;
           }
@@ -738,6 +727,7 @@ export default async function handler(req: any, res: any) {
               error_message
             FROM job_publication_channels
             WHERE job_id = ${jobId}
+              AND channel = 'stanby'
             ORDER BY channel
           `;
 

@@ -3,7 +3,7 @@ import liff from "@line/liff";
 import "./JobManagement.css";
 
 type PublicationChannelStatus = {
-  channel: "terrace_jobs" | "stanby";
+  channel: "stanby";
   enabled: boolean;
   status: "not_connected" | "pending" | "published" | "paused" | "error";
   external_job_id?: string | null;
@@ -192,7 +192,7 @@ export default function JobManagement({
     item?: PublicationChannelStatus,
   ) => {
     if (!item || !item.enabled) {
-      return channel === "terrace_jobs" ? "停止中" : "未連携";
+      return "未連携";
     }
 
     switch (item.status) {
@@ -205,7 +205,7 @@ export default function JobManagement({
       case "error":
         return "エラー";
       default:
-        return channel === "terrace_jobs" ? "公開準備中" : "未連携";
+        return "未連携";
     }
   };
 
@@ -565,44 +565,41 @@ export default function JobManagement({
                     掲載先
                   </div>
 
-                  {(
-                    [
-                      ["terrace_jobs", "TERRACE JOBS"],
-                      ["stanby", "スタンバイ"],
-                    ] as const
-                  ).map(([channel, label]) => {
-                    const item = getPublicationChannel(job, channel);
-                    const badgeStyle = getChannelBadgeStyle(channel, item);
+                  {([["stanby", "スタンバイ"]] as const).map(
+                    ([channel, label]) => {
+                      const item = getPublicationChannel(job, channel);
+                      const badgeStyle = getChannelBadgeStyle(channel, item);
 
-                    return (
-                      <div
-                        key={channel}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: "10px",
-                          padding: "5px 0",
-                          fontSize: "13px",
-                        }}
-                      >
-                        <span style={{ fontWeight: 700 }}>{label}</span>
-
-                        <span
+                      return (
+                        <div
+                          key={channel}
                           style={{
-                            display: "inline-block",
-                            padding: "3px 8px",
-                            borderRadius: "999px",
-                            fontSize: "11px",
-                            fontWeight: 800,
-                            ...badgeStyle,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: "10px",
+                            padding: "5px 0",
+                            fontSize: "13px",
                           }}
                         >
-                          {getChannelStatusLabel(channel, item)}
-                        </span>
-                      </div>
-                    );
-                  })}
+                          <span style={{ fontWeight: 700 }}>{label}</span>
+
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "3px 8px",
+                              borderRadius: "999px",
+                              fontSize: "11px",
+                              fontWeight: 800,
+                              ...badgeStyle,
+                            }}
+                          >
+                            {getChannelStatusLabel(channel, item)}
+                          </span>
+                        </div>
+                      );
+                    },
+                  )}
                 </div>
 
                 <div

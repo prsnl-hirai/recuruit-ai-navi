@@ -72,7 +72,7 @@ export default function PublishOptions({
   const copyIndeed = () => {
     void copyText(
       createIndeedText(),
-      "Indeed掲載用の求人原稿をコピーしました。"
+      "Indeed掲載用の求人原稿をコピーしました。",
     );
   };
 

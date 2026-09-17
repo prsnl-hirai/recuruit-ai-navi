@@ -5,19 +5,15 @@ import recruitAiNaviIcon from "./assets/recruit-ai-navi-icon.png";
 import PublishOptions from "./PublishOptions";
 import JobManagement from "./JobManagement";
 import ApplicantManagement from "./ApplicantManagement";
-import CompanyPage from "./CompanyPage";
-import PrivacyPage from "./PrivacyPage";
-import PublicJobList from "./PublicJobList";
 import SubsidyDiagnosis from "./SubsidyDiagnosis";
 import SubsidyConsultationManagement from "./SubsidyConsultationManagement";
 
 type WorkType = "固定時間" | "シフト制";
 type SalaryType = "時給" | "日給" | "月給" | "年俸";
 
-type PublicationChannel = "terrace_jobs" | "stanby";
+type PublicationChannel = "stanby";
 
 type PublicationChannelState = {
-  terrace_jobs: boolean;
   stanby: boolean;
 };
 
@@ -590,7 +586,6 @@ function App() {
   /* 掲載先 */
   const [publicationChannels, setPublicationChannels] =
     useState<PublicationChannelState>({
-      terrace_jobs: true,
       stanby: false,
     });
   const [savingPublicationChannels, setSavingPublicationChannels] =
@@ -1059,10 +1054,6 @@ function App() {
           jobId,
           channels: [
             {
-              channel: "terrace_jobs",
-              enabled: publicationChannels.terrace_jobs,
-            },
-            {
               channel: "stanby",
               enabled: publicationChannels.stanby,
             },
@@ -1480,13 +1471,9 @@ function App() {
               ? channelData.channels
               : [];
 
-            const terrace = rows.find(
-              (item: any) => item.channel === "terrace_jobs",
-            );
             const stanby = rows.find((item: any) => item.channel === "stanby");
 
             setPublicationChannels({
-              terrace_jobs: terrace ? Boolean(terrace.enabled) : true,
               stanby: stanby ? Boolean(stanby.enabled) : false,
             });
           }
@@ -1581,7 +1568,6 @@ function App() {
           setResult(null);
           setErrorMessage("");
           setPublicationChannels({
-            terrace_jobs: true,
             stanby: false,
           });
           setCurrentPage("create");
@@ -1609,18 +1595,6 @@ function App() {
   ======================================== */
 
   const pathname = window.location.pathname;
-
-  if (pathname === "/company") {
-    return <CompanyPage />;
-  }
-
-  if (pathname === "/privacy") {
-    return <PrivacyPage />;
-  }
-
-  if (pathname === "/jobs") {
-    return <PublicJobList />;
-  }
 
   /* ========================================
      レンダリング
@@ -2994,44 +2968,6 @@ function App() {
                 gap: "10px",
               }}
             >
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  padding: "14px 16px",
-                  border: "1px solid #dbe3ef",
-                  borderRadius: "12px",
-                  background: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 800 }}>TERRACE JOBS</div>
-                  <div
-                    style={{
-                      marginTop: "3px",
-                      color: "#64748b",
-                      fontSize: "13px",
-                    }}
-                  >
-                    TERRACE JOBSの公開求人として掲載
-                  </div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={publicationChannels.terrace_jobs}
-                  onChange={(e) =>
-                    setPublicationChannels((prev) => ({
-                      ...prev,
-                      terrace_jobs: e.target.checked,
-                    }))
-                  }
-                  style={{ width: "20px", height: "20px" }}
-                />
-              </label>
-
               <label
                 style={{
                   display: "flex",
